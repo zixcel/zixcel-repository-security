@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zixcel-repository-security"
+version = "0.1.0"
+requires-python = ">=3.12"
+description = "Local, revision-bound secret and disclosure inspection with private receipts"
+license = "Apache-2.0"
+license-files = ["LICENSE", "LICENSE-MIT", "NOTICE"]
+
+[project.scripts]
+zixcel-repository-security = "zixcel_repository_security.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

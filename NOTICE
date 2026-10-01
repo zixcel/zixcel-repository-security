@@ -1,0 +1,7 @@
+zixcel-repository-security
+Copyright 2026 株式会社HAT
+
+Earlier locally supplied copies included an MIT license notice naming
+Zixcel contributors. That notice is retained in LICENSE-MIT; previously
+granted permissions are not revoked. The current distribution is offered
+under Apache-2.0. Gitleaks is invoked as an external tool and is not bundled.
