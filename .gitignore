@@ -57,3 +57,6 @@ __pycache__/
 *.vsix
 
 *.pre-*
+
+# Generated package archives are local build outputs.
+*.tgz
