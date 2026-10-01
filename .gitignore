@@ -60,3 +60,24 @@ __pycache__/
 
 # Generated package archives are local build outputs.
 *.tgz
+
+# Generated archives, local caches, and coverage reports.
+/*.tgz
+/*.tar.gz
+/*.tar
+/*.zip
+/*.whl
+/*.crate
+/.ruff_cache/
+/.mypy_cache/
+/.tox/
+/.nox/
+/.hypothesis/
+/.coverage
+/.coverage.*
+/htmlcov/
+/lcov.info
+/junit.xml
+/*.profraw
+/*.profdata
+/*.egg-info/
