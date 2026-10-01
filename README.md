@@ -25,3 +25,9 @@ Use checksum-verified official Gitleaks 8.30.1 and verify its executable digest 
 ## License
 
 The current distribution is offered under Apache-2.0; see LICENSE. Prior MIT notices are retained in LICENSE-MIT and NOTICE, without revoking previous permissions. Private dictionaries, registration data and execution receipts are excluded from distribution. Gitleaks is an external tool with its own license.
+
+## Package integration
+
+The package is an independently consumable unit. Callers reference its documented
+interface through a versioned dependency and own application-specific composition
+and integration.
