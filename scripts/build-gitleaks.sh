@@ -30,6 +30,7 @@ mkdir -m 700 "$output"
     "$work/go/bin/go" build -mod=readonly -trimpath -buildvcs=false \
         -ldflags='-w -buildid= -X=github.com/zricethezav/gitleaks/v8/version.Version=8.30.1-hardened' \
         -o "$output/gitleaks" .
+    bash "$recipe/gitleaks-notices.sh" "$output/licenses" "$work/go/bin/go"
 )
 chmod 755 "$output/gitleaks"
 install -m 644 "$source/LICENSE" "$output/LICENSE"
@@ -57,6 +58,6 @@ jq -s -e --slurpfile imports "$output/imports.json" '
         ($affected|length) > 0 and all($affected[];
             . as $package | (contains("*")|not) and ($imports[0]|index($package)) == null))
     ' "$output/vulnerabilities.jsonl" > /dev/null
-tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$output" -cf - Go-runtime-LICENSE LICENSE gitleaks | \
+tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$output" -cf - Go-runtime-LICENSE LICENSE gitleaks licenses | \
     gzip -n > "$output/gitleaks_8.30.1_hardened_linux_x64.tar.gz"
 printf '%s\n' 'Hardened engine: upstream tests, module integrity and binary vulnerability checks passed.'
