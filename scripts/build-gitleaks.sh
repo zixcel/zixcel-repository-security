@@ -25,6 +25,7 @@ mkdir -m 700 "$output"
 (
     cd "$source"
     "$work/go/bin/go" mod verify
+    "$work/go/bin/go" list -mod=readonly -deps . | jq -R -s 'split("\n")|map(select(length > 0))' > "$output/imports.json"
     "$work/go/bin/go" test -mod=readonly ./...
     "$work/go/bin/go" build -mod=readonly -trimpath -buildvcs=false \
         -ldflags='-w -buildid= -X=github.com/zricethezav/gitleaks/v8/version.Version=8.30.1-hardened' \
@@ -44,6 +45,18 @@ GOBIN="$work/bin" "$work/go/bin/go" install golang.org/x/vuln/cmd/govulncheck@v1
 jq -s -e '.[1].pkgSymbols|length > 0' "$output/binary-inventory.jsonl" > /dev/null
 "$work/bin/govulncheck" -mode=binary -json "$output/gitleaks" > "$output/vulnerabilities.jsonl"
 jq -s -e '[.[]|select(.finding.trace[0].package)]|length == 0' "$output/vulnerabilities.jsonl" > /dev/null
+# Accept module-only notices only when every affected package is proven absent.
+# Missing/unknown package definitions fail closed; no advisory-specific allowlist.
+jq -s -e --slurpfile imports "$output/imports.json" '
+    . as $documents | all($documents[] |
+        select(.finding and (.finding.trace[0].package == null)) | .finding;
+        . as $finding |
+        [$documents[] | select(.osv.id == $finding.osv) | .osv.affected[] |
+            select(.package.name == $finding.trace[0].module) |
+            .ecosystem_specific.imports[]?.path] as $affected |
+        ($affected|length) > 0 and all($affected[];
+            . as $package | (contains("*")|not) and ($imports[0]|index($package)) == null))
+    ' "$output/vulnerabilities.jsonl" > /dev/null
 tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$output" -cf - Go-runtime-LICENSE LICENSE gitleaks | \
     gzip -n > "$output/gitleaks_8.30.1_hardened_linux_x64.tar.gz"
 printf '%s\n' 'Hardened engine: upstream tests, module integrity and binary vulnerability checks passed.'
