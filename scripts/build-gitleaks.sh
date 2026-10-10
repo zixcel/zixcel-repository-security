@@ -40,6 +40,8 @@ cp "$source/go.mod" "$source/go.sum" "$output/"
 # JSON mode always returns zero. Reject affected compiled packages and symbols;
 # module-only notices can describe unused packages and remain in the audit evidence.
 GOBIN="$work/bin" "$work/go/bin/go" install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+"$work/bin/govulncheck" -mode=extract "$output/gitleaks" > "$output/binary-inventory.jsonl"
+jq -s -e '.[1].pkgSymbols|length > 0' "$output/binary-inventory.jsonl" > /dev/null
 "$work/bin/govulncheck" -mode=binary -json "$output/gitleaks" > "$output/vulnerabilities.jsonl"
 jq -s -e '[.[]|select(.finding.trace[0].package)]|length == 0' "$output/vulnerabilities.jsonl" > /dev/null
 tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$output" -cf - Go-runtime-LICENSE LICENSE gitleaks | \
