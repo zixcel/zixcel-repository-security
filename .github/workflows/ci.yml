@@ -27,8 +27,10 @@ jobs:
         run: |
           cargo fmt --check
           cargo clippy --locked --all-targets -- -D warnings
-      - name: Provision SHA-pinned public Gitleaks
-        run: cargo run --locked -- provision-gitleaks --download --output-directory "$RUNNER_TEMP/zixcel-gitleaks"
+      - name: Build and audit curated Gitleaks
+        run: bash scripts/build-gitleaks.sh "$RUNNER_TEMP/curated-engine"
+      - name: Provision SHA-pinned curated Gitleaks
+        run: cargo run --locked -- provision-gitleaks --executable "$RUNNER_TEMP/curated-engine/gitleaks" --output-directory "$RUNNER_TEMP/zixcel-gitleaks"
       - name: Test with actual Gitleaks and synthetic data
         env:
           ZIXCEL_TEST_GITLEAKS_CONFIG: ${{ runner.temp }}/zixcel-gitleaks/config.json
