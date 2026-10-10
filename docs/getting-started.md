@@ -178,7 +178,7 @@ CARGO_TARGET_DIR="$ZIXCEL_SECURITY_BUILD_DIR" cargo clippy --locked --all-target
 CARGO_TARGET_DIR="$ZIXCEL_SECURITY_BUILD_DIR" cargo package --locked
 ```
 
-`--archive` accepts the SHA-pinned public release archive offline. `--download`
+`--archive` accepts the SHA-pinned curated release archive offline. `--download`
 is a separate explicit choice requiring curl/HTTPS; it fetches only the fixed
 public URL in `tests/gitleaks-pin.json`. Executable and archive hashes are checked
 before writing any installation files. No scanned source is uploaded.
@@ -223,3 +223,18 @@ Traversal depth, entries, file bytes and expanded archives are bounded. Symlinks
 unreadable/changed inputs, unsupported formats and Git administrative entries are
 incomplete; Git object/history inspection is not implied. Detected values are not
 stored, but receipt location metadata can be sensitive and must remain private.
+
+## Curated engine build
+
+The curated engine retains Gitleaks 8.30.1 detector source and rules. Its fixed
+Go module lockfiles update compression, RAR, XZ and Go crypto/text dependencies;
+Go 1.27.2 supplies the patched standard library. `scripts/build-gitleaks.sh`
+verifies the official toolchain archive, checks Go module integrity, runs upstream
+tests and audits compiled packages/symbols with govulncheck 1.8.0 before packaging.
+Symbols are retained for accurate binary inspection; no compiler is needed at runtime.
+
+Module-only notices remain in the build evidence. In particular, the deprecated
+OpenPGP packages in `golang.org/x/crypto` are not imported or linked by this engine;
+its used crypto packages are separately inspected. No advisory IDs are ignored.
+Standalone curated engine assets are distributed with vpremises-security releases.
+The adapter verifies exact executable/archive hashes before provisioning.
