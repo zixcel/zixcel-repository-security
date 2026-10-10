@@ -7,7 +7,7 @@ output=$1
 [[ "$output" == /* && ! -e "$output" ]] || exit 1
 recipe=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 work=$(mktemp -d "$RUNNER_TEMP/zixcel-engine.XXXXXX")
-trap 'rm -rf -- "$work"' EXIT
+trap 'chmod -R u+w -- "$work"; rm -rf -- "$work"' EXIT
 curl --disable --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --max-time 120 \
     https://go.dev/dl/go1.27.2.linux-amd64.tar.gz -o "$work/go.tgz"
 printf '%s  %s\n' ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045fe5 "$work/go.tgz" | sha256sum -c --strict
