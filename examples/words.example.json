@@ -1,0 +1,9 @@
+{
+  "schema": "zixcel://repository-security/words/v1",
+  "words": [
+    {
+      "id": "word-01",
+      "values": ["FORBIDDEN_SAMPLE", "架空の検査用ワード"]
+    }
+  ]
+}

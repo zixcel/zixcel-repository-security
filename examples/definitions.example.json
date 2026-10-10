@@ -1,0 +1,22 @@
+{
+  "schema": "zixcel://repository-security/definitions/v1",
+  "rules": [
+    {
+      "id": "word-01",
+      "kind": "literal",
+      "category": "word",
+      "values": [
+        "FORBIDDEN_SAMPLE",
+        "架空の検査用ワード"
+      ]
+    },
+    {
+      "id": "pattern-01",
+      "kind": "regex",
+      "regex": "SYNTHETIC_NATIVE_[0-9]{4}",
+      "keywords": [
+        "SYNTHETIC_NATIVE_"
+      ]
+    }
+  ]
+}
