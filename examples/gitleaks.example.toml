@@ -1,0 +1,8 @@
+# Synthetic format marker; this is not a real credential rule.
+# Replace with organization-specific RE2 rules in your private configuration.
+title = "Additional synthetic detection"
+
+[[rules]]
+id = "synthetic-marker"
+description = "Synthetic local verification marker"
+regex = 'SYNTHETIC_CHECK_[0-9]{4}'

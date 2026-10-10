@@ -1,9 +1,8 @@
 {
-  "schema": "zixcel://repository-security/policy/v1",
+  "schema": "zixcel://repository-security/policy/v2",
   "repository_id": "zixcel-repository-security",
   "scope": "source-secret-disclosure/v1",
   "required_engines": [
-    "builtin-disclosure",
     "gitleaks"
   ],
   "gitleaks_version": "8.30.1"

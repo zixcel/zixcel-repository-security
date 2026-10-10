@@ -1,0 +1,37 @@
+title = "Public source disclosure checks"
+
+# The standard private-key rule requires a body and terminator. Retain incomplete
+# header detection as an additional native rule, without a Python detector.
+[[rules]]
+id = "zixcel-disclosure-private-key"
+regex = '-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----'
+
+[[rules]]
+id = "zixcel-disclosure-email-address"
+regex = '(?:(?:https?|ssh)://[^\s\v\p{Z}\x{0085}\x{001c}-\x{001f}/]*?)?\b([A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,63})\b:?'
+secretGroup = 1
+[[rules.allowlists]]
+regexTarget = "secret"
+regexes = ['(?i)@(?:example\.com|example\.org|example\.net|example\.test|example\.co\.jp|mail\.example\.co\.jp|[A-Za-z0-9.-]+\.(?:example|invalid|test|localhost))$']
+[[rules.allowlists]]
+regexTarget = "match"
+regexes = ['^(?:https?|ssh)://', '^git@github\.com:$']
+
+[[rules]]
+id = "zixcel-disclosure-telephone"
+regex = '\p{Nd}?0[789]0[- ]\p{Nd}{4}[- ]\p{Nd}{4}\p{Nd}?'
+[[rules.allowlists]]
+regexTarget = "match"
+regexes = ['^\p{Nd}{4}[- ]', '[- ]\p{Nd}{5}$']
+
+[[rules]]
+id = "zixcel-disclosure-private-classified-record"
+regex = '''(?:confidentiality|classification)[\t \x{001f}\p{Zs}]*[:=][\t \x{001f}\p{Zs}]*["'](?:customer-confidential|personal-confidential)["']'''
+
+[[rules]]
+id = "zixcel-disclosure-personal-profile-value"
+regex = '''(?:date_of_birth|birth_date|birthday|phone_number|postal_address)[\t \x{001f}\p{Zs}]*["']?[\t \x{001f}\p{Zs}]*[:=][\t \x{001f}\p{Zs}]*["'][^"'\r\n\v\f\x{001c}-\x{001e}\x{0085}\p{Zl}\p{Zp}]+'''
+
+[[rules]]
+id = "zixcel-disclosure-machine-home-path"
+regex = '(?:/home/[A-Za-z0-9_.-]+/|/Users/[A-Za-z0-9_.-]+/|[A-Z]:\\Users\\[A-Za-z0-9_.-]+\\)'
