@@ -1,0 +1,150 @@
+{
+  "repository": "zixcel/zixcel-repository-security",
+  "purpose": "Check a source tree for secrets and information that should not be published before sharing it.",
+  "responsibility_boundary": "Own the named reusable integration/data mechanism. Product roles/UI and operational approvals stay with consumers; transport/custody reuse managed Crowsi components where capabilities fit. Planning-only APIs must remain clearly distinguished from implemented external operations.",
+  "packages": [
+    {
+      "manifest": "Cargo.toml",
+      "package": "zixcel-repository-security",
+      "ecosystem": "rust",
+      "description": "Bounded local repository inspection with pinned Gitleaks",
+      "interfaces": {
+        "lib": "src/lib.rs",
+        "features": {},
+        "bins": [],
+        "public_modules": [
+          "cli",
+          "config",
+          "definitions",
+          "directory",
+          "engine",
+          "io",
+          "maintenance",
+          "scanner"
+        ],
+        "public_reexports": [],
+        "implicit_bins": []
+      },
+      "declared_commands": {}
+    }
+  ],
+  "schema_definitions": [
+    "assets/definitions.v1.schema.json"
+  ],
+  "test_sources": [
+    "src/engine.rs",
+    "src/io.rs",
+    "src/lib.rs",
+    "src/main.rs",
+    "src/maintenance.rs",
+    "src/scanner.rs",
+    "tests/directory.rs",
+    "tests/gitleaks-pin.json",
+    "tests/security.rs"
+  ],
+  "example_sources": [
+    "examples/config.example.json",
+    "examples/definitions.example.json",
+    "examples/gitleaks.example.toml",
+    "examples/words.example.json"
+  ],
+  "workflow_definitions": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "jobs": [
+        {
+          "job": "test",
+          "condition": null,
+          "runs_on": "ubuntu-latest",
+          "steps": [
+            {
+              "name": null,
+              "run": null,
+              "uses": "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+              "condition": null
+            },
+            {
+              "name": "Select external build directory",
+              "run": "echo \"CARGO_TARGET_DIR=$RUNNER_TEMP/zixcel-security-target\" >> \"$GITHUB_ENV\"",
+              "uses": null,
+              "condition": null
+            },
+            {
+              "name": "Install declared Rust toolchain",
+              "run": "rustup toolchain install 1.97.1 --profile minimal --component rustfmt --component clippy",
+              "uses": null,
+              "condition": null
+            },
+            {
+              "name": "Format and lint",
+              "run": "cargo fmt --check\ncargo clippy --locked --all-targets -- -D warnings\n",
+              "uses": null,
+              "condition": null
+            },
+            {
+              "name": "Build and audit curated Gitleaks",
+              "run": "bash scripts/build-gitleaks.sh \"$RUNNER_TEMP/curated-engine\"",
+              "uses": null,
+              "condition": null
+            },
+            {
+              "name": "Provision SHA-pinned curated Gitleaks",
+              "run": "cargo run --locked -- provision-gitleaks --executable \"$RUNNER_TEMP/curated-engine/gitleaks\" --output-directory \"$RUNNER_TEMP/zixcel-gitleaks\"",
+              "uses": null,
+              "condition": null
+            },
+            {
+              "name": "Test with actual Gitleaks and synthetic data",
+              "run": "cargo test --locked",
+              "uses": null,
+              "condition": null
+            },
+            {
+              "name": "Verify community policy and source distribution",
+              "run": "cargo run --locked -- check-oss-policy --root \"$PWD\"\ncargo package --locked\n",
+              "uses": null,
+              "condition": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/oss-policy.yml",
+      "jobs": [
+        {
+          "job": "repository-policy",
+          "condition": null,
+          "runs_on": "ubuntu-latest",
+          "steps": [
+            {
+              "name": null,
+              "run": null,
+              "uses": "actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803",
+              "condition": null
+            },
+            {
+              "name": "Select external build directory",
+              "run": "echo \"CARGO_TARGET_DIR=$RUNNER_TEMP/zixcel-security-policy-target\" >> \"$GITHUB_ENV\"",
+              "uses": null,
+              "condition": null
+            },
+            {
+              "name": "Install declared Rust toolchain",
+              "run": "rustup toolchain install 1.97.1 --profile minimal",
+              "uses": null,
+              "condition": null
+            },
+            {
+              "name": "Verify repository policy",
+              "run": "cargo run --locked -- check-oss-policy --root \"$PWD\"",
+              "uses": null,
+              "condition": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "evidence_policy": "Declarations and source paths are not proof of an executed acceptance. Exact CI head and result are recorded separately. No live accounts or production acceptance is inferred."
+}
