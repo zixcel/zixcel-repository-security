@@ -36,3 +36,5 @@ and registry installation have not been verified.
 [Examples](examples) · [Source](src) · [Verification cases](tests) ·
 [Contributing](CONTRIBUTING.md) · [Security reporting](SECURITY.md) ·
 [License](LICENSE) · [Attribution notices](NOTICE)
+
+[OSS responsibility and source completion](docs/oss-source-contract.md) defines the supported package boundary and required acceptance. It does not declare unexecuted source, distribution or production checks complete.
