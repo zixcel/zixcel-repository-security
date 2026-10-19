@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { merge, type Client } from './orchestrate.mts';
 const repo = 'example/project', sha = 'a'.repeat(40), merged = 'b'.repeat(40);
-interface Scenario { failure?: string; unprotected?: boolean; major?: boolean; scripts?: boolean; conflict?: boolean; pending?: boolean; staleBase?: boolean; foreignActor?: boolean; foreignHead?: boolean; noWorkflow?: boolean; missingWorkflow?: boolean; missingContract?: boolean; disabledWorkflow?: boolean; actualMajor?: boolean; }
+interface Scenario { failure?: string; major?: boolean; scripts?: boolean; conflict?: boolean; pending?: boolean; staleBase?: boolean; foreignActor?: boolean; foreignHead?: boolean; noWorkflow?: boolean; missingWorkflow?: boolean; missingContract?: boolean; disabledWorkflow?: boolean; actualMajor?: boolean; }
 function scenario(options: Scenario = {}) {
   let writes = 0;
   const api: Client = async (path, method) => {
@@ -15,8 +15,6 @@ function scenario(options: Scenario = {}) {
       user: { login: 'dependabot[bot]', id: 49699333 }, changed_files: 1, commits: 1,
       head: { repo: { full_name: repo }, ref: 'dependabot/npm/example', sha },
       base: { repo: { full_name: repo }, ref: 'main', sha: 'c'.repeat(40) }, merged: writes > 0, merge_commit_sha: merged };
-    if (path.endsWith('/rules/branches/main')) return options.unprotected ? [] : [{ type: 'pull_request' },
-      { type: 'required_status_checks', parameters: { strict_required_status_checks_policy: true, required_status_checks: [{}] } }];
     if (path.endsWith('/git/ref/heads/main')) return { object: { type: 'commit', sha: 'd'.repeat(40) } };
     if (path.includes('/commits?')) return [{ committer: { login: 'web-flow', id: 19864447 }, author: { login: 'dependabot[bot]', id: 49699333 },
       commit: { verification: { verified: true, reason: 'valid' }, message: `Bumps x from 1.0.0 to ${options.major ? '2.0.0' : '1.0.1'}\n\n---\nupdated-dependencies:\n- dependency-name: x\n  update-type: version-update:semver-${options.major ? 'major' : 'patch'}\n...` } }];
@@ -41,7 +39,7 @@ function scenario(options: Scenario = {}) {
   };
   return { run: () => merge(repo, 1, api, content, options.missingContract ? [] : ['CI']), writes: () => writes };
 }
-test('a complete successful scenario merges once and independently reads back', async () => {
+test('successful CI merges once without paid protection API calls and independently reads back', async () => {
   const s = scenario(); assert.equal(await s.run(), `merged: ${merged}`); assert.equal(s.writes(), 1);
 });
 test('failure and pending CI cannot perform a write', async () => {
@@ -49,8 +47,8 @@ test('failure and pending CI cannot perform a write', async () => {
     const s = scenario(options); assert.match(await s.run(), /^waiting:/); assert.equal(s.writes(), 0);
   }
 });
-test('unprotected, major and package behavior changes need individual review', async () => {
-  for (const options of [{ unprotected: true }, { major: true }, { scripts: true }]) {
+test('major and package behavior changes need individual review', async () => {
+  for (const options of [{ major: true }, { scripts: true }]) {
     const s = scenario(options); assert.match(await s.run(), /^manual:/); assert.equal(s.writes(), 0);
   }
 });
