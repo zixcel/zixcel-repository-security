@@ -1,6 +1,12 @@
 import {object,list,type Json} from './model.mts';
 import {Missing,absent,type Client} from './github.mts';
 export const environment = 'dependency-maintenance';
+export async function requireInactive(repository: string,client: Client): Promise<void> {
+  try {
+    const variable = object(await client(`repos/${repository}/actions/variables/DEPENDABOT_AUTOMERGE_ENABLED`));
+    if (variable.value !== 'false') throw Error('App registration requires inactive merging');
+  } catch (e) {if (!(e instanceof Missing)) throw e;}
+}
 export function validateEnvironment(value: unknown): void {
   const v = object(value), p = object(v.deployment_branch_policy);
   if (v.name !== environment || p.protected_branches !== false || p.custom_branch_policies !== true
@@ -16,6 +22,7 @@ export async function verifyEnvironment(repository: string,client: Client): Prom
   return path;
 }
 export async function prepareEnvironment(repository: string,client: Client): Promise<void> {
+  await requireInactive(repository,client);
   const path = `repos/${repository}/environments/${environment}`;
   let exists = true;
   try {await client(path);} catch (e) {if (!(e instanceof Missing)) throw e; exists = false;}

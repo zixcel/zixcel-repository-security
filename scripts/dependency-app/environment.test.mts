@@ -28,8 +28,16 @@ test('never replace existing broad or tag-only environment policy',async()=>{
 test('existing private keys stop setup instead of being overwritten',async()=>{
   const api:Client=async(path,method='GET')=>{
     assert.equal(method,'GET');if(path===prefix)return env;
+    if(path.includes('/actions/variables/'))throw new Missing();
     if(path.includes('deployment-branch-policies'))return {total_count:1,branch_policies:[{name:'main',type:'branch'}]};
     return {name:'DEPENDENCY_MERGE_PRIVATE_KEY'};
   };
   await assert.rejects(prepareEnvironment('example/project',api),/Existing configuration/);
+});
+test('an active merger cannot enter registration or change its Environment',async()=>{
+  const calls:string[]=[];
+  await assert.rejects(prepareEnvironment('example/project',async(path,method='GET')=>{
+    calls.push(path);assert.equal(method,'GET');return {value:'true'};
+  }),/requires inactive/);
+  assert.deepEqual(calls,['repos/example/project/actions/variables/DEPENDABOT_AUTOMERGE_ENABLED']);
 });

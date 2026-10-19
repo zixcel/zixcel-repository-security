@@ -1,7 +1,7 @@
 import {createAppAuth} from '@octokit/auth-app';
 import {object,text,id,validateApp,validateInstallation,type Json} from './model.mts';
 import {gh,request,absent,installSecret,type Client} from './github.mts';
-import {environment,prepareEnvironment,verifyEnvironment,bindVariables} from './environment.mts';
+import {environment,prepareEnvironment,verifyEnvironment,bindVariables,requireInactive} from './environment.mts';
 import {verifyTokens,type RecordStage} from './tokens.mts';
 export class Registration {
   #key = '';
@@ -46,6 +46,7 @@ export class Registration {
     validateInstallation(await this.#appApi(`app/installations/${installation}`),this.ownerId,appId);
     this.#record('selected_installation_verified',{installationId:installation});
     await verifyTokens(this.#appApi,request,installation,this.repository,this.repoId,this.#record);
+    await requireInactive(this.repository,gh);
     const path = await verifyEnvironment(this.repository,gh);
     await absent(`${path}/secrets/DEPENDENCY_MERGE_PRIVATE_KEY`,gh);
     this.#record('registering_environment_key');
