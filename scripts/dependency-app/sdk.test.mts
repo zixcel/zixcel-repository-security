@@ -18,6 +18,6 @@ test('official SDK creates a verifiable short-lived App JWT using an ephemeral t
 test('registration session has no serializable key, App/JWT client or logger state',()=>{
   const registration=new Registration('example/project',1,2,()=>{});
   assert.deepEqual(Object.keys(JSON.parse(JSON.stringify(registration))).sort(),
-    ['owner','ownerId','repoId','repositories','repository','slug']);
+    ['owner','ownerId','ownerType','repoId','repositories','repository','slug']);
   registration.dispose();
 });

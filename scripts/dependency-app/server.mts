@@ -4,6 +4,7 @@ import {manifest} from './model.mts';
 import {HttpFailure} from './github.mts';
 export interface Session {
   owner: string;
+  ownerType?: 'User'|'Organization';
   slug: string;
   repository: string;
   repositories?: readonly string[];
@@ -32,11 +33,13 @@ export async function serve(session: Session,onFinish: (state:'complete'|'stoppe
     if (url.pathname === `/setup/${nonce}`) {
       if (phase === 'install') return installationPage();
       if (phase !== 'register') return html(res,`Setup phase: ${phase}`);
+      const registrationURL=session.ownerType==='User' ? 'https://github.com/settings/apps/new'
+        : `https://github.com/organizations/${session.owner}/settings/apps/new`;
       const data = manifest(session.owner,`${origin}/registered/${nonce}`);
       return html(res,`<h1>Register a private dependency App</h1><p>Owner: ${escape(session.owner)}. `+
         `Keep the name ${escape(session.slug)} and select exactly ${escape((session.repositories ?? [session.repository]).join(', '))}. `+
         `No webhooks. Only the reviewed repository permissions. After registration, select only the reviewed repositories.</p>`+
-        `<form method="post" action="https://github.com/organizations/${session.owner}/settings/apps/new?state=${state}">`+
+        `<form method="post" action="${registrationURL}?state=${state}">`+
         `<input type="hidden" name="manifest" value="${escape(JSON.stringify(data))}">`+
         '<button type="submit">Register on GitHub</button></form>');
     }
