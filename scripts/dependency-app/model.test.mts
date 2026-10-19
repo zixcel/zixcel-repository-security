@@ -17,6 +17,11 @@ test('App metadata is bound to the approved owner, slug and exact permissions', 
   for (const changed of [{owner:{id:3}},{slug:'other'}, {permissions:{...permissions,administration:'write'}},
     {events:['push']},{public:true}]) assert.throws(()=>validateApp({...app,...changed},2,app.slug));
 });
+test('accept documented dotted App client IDs without accepting control characters', () => {
+  for (const client_id of ['Iv1.syntheticclient','Iv23syntheticclient'])
+    assert.equal(validateApp({...app,client_id},2,app.slug).client_id,client_id);
+  assert.throws(()=>validateApp({...app,client_id:'Iv1.synthetic\nclient'},2,app.slug));
+});
 test('installation rejects all-repository selection, suspension, excess rights and foreign owner', () => {
   const i = {id:4,account:{id:2},app_id:1,repository_selection:'selected',suspended_at:null,permissions};
   assert.equal(validateInstallation(i,2,1),4);

@@ -41,7 +41,7 @@ export function validateApp(value: unknown, ownerId: number, slug: string): Json
   if (id(object(app.owner).id) !== ownerId || app.slug !== slug || !equalPermissions(app.permissions)
     || list(app.events).length || (app.public !== undefined && app.public !== false)) throw Error('App binding mismatch');
   id(app.id);
-  if (!/^[A-Za-z0-9]{10,80}$/.test(text(app.client_id))) throw Error('Invalid client ID');
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{9,79}$/.test(text(app.client_id))) throw Error('Invalid client ID');
   return app;
 }
 export function validateInstallation(value: unknown, ownerId: number, appId: number): number {
