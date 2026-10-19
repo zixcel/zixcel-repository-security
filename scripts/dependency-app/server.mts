@@ -6,6 +6,7 @@ export interface Session {
   owner: string;
   slug: string;
   repository: string;
+  repositories?: readonly string[];
   registered(code: string): Promise<void>;
   installed(id: number): Promise<void>;
 }
@@ -26,15 +27,15 @@ export async function serve(session: Session,onFinish: (state:'complete'|'stoppe
       return html(res,'Request rejected',403);
     const url = new URL(req.url ?? '/',origin);
     const installationPage = (): void => html(res,
-      `<h1>App verified</h1><p>Select only ${escape(session.repository)} on GitHub.</p>`+
+      `<h1>App verified</h1><p>Select exactly these repositories on GitHub: ${escape((session.repositories ?? [session.repository]).join(', '))}.</p>`+
       `<a href="https://github.com/apps/${session.slug}/installations/new">Install the private App</a>`);
     if (url.pathname === `/setup/${nonce}`) {
       if (phase === 'install') return installationPage();
       if (phase !== 'register') return html(res,`Setup phase: ${phase}`);
       const data = manifest(session.owner,`${origin}/registered/${nonce}`);
       return html(res,`<h1>Register a private dependency App</h1><p>Owner: ${escape(session.owner)}. `+
-        `Keep the name ${escape(session.slug)} and select only ${escape(session.repository)}. `+
-        `No webhooks. Only the reviewed repository permissions. After registration, select only the pilot repository.</p>`+
+        `Keep the name ${escape(session.slug)} and select exactly ${escape((session.repositories ?? [session.repository]).join(', '))}. `+
+        `No webhooks. Only the reviewed repository permissions. After registration, select only the reviewed repositories.</p>`+
         `<form method="post" action="https://github.com/organizations/${session.owner}/settings/apps/new?state=${state}">`+
         `<input type="hidden" name="manifest" value="${escape(JSON.stringify(data))}">`+
         '<button type="submit">Register on GitHub</button></form>');
