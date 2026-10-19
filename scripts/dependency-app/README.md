@@ -8,13 +8,13 @@ no cryptographic algorithm or local key store.
 After source/permission approval, prepare a private directory and a local JSON file:
 
 ```json
-{"repository":"example/project","receipt":"/private/directory/setup.jsonl"}
+{"repository":"example/project","receiptDirectory":"/private/directory"}
 ```
 
 Install the locked dependencies with
 `pnpm --dir scripts/dependency-app install --frozen-lockfile --ignore-scripts`, then
 run `bash scripts/dependency-app/open-local.sh /absolute/path/to/config.json`.
-Open the printed loopback page and register the App, then select **only the pilot
+Open the printed loopback page and register the App without changing its name, then select **only the pilot
 repository** when installing it. Leave the process running until completion.
 
 The key is received in memory. Before registering it with `gh secret set` via
