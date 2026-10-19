@@ -23,7 +23,13 @@ pub fn require(ok: bool) -> Result<()> {
     }
 }
 pub fn digest(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    use std::fmt::Write;
+    let digest = Sha256::digest(bytes);
+    let mut encoded = String::with_capacity(digest.len() * 2);
+    for byte in digest {
+        write!(&mut encoded, "{byte:02x}").expect("writing to String is infallible");
+    }
+    encoded
 }
 pub fn canonical(value: &Value) -> Vec<u8> {
     serde_json::to_vec(value).expect("JSON value serializes")
