@@ -1,24 +1,6 @@
 name: Verified Dependabot merge
 description: Merge compatible signed dependency-only updates after successful owner checks
 inputs:
-  token:
-    description: Repository-scoped installation token or the owner workflow token
-    default: ${{ github.token }}
-  authentication:
-    description: Explicit github-token or github-app credential boundary
-    default: github-token
-  installation-id:
-    description: Installation ID returned by the official token action
-    default: ''
-  expected-installation-id:
-    description: Reviewed Environment installation binding
-    default: ''
-  app-slug:
-    description: App slug returned by the official token action
-    default: ''
-  expected-app-slug:
-    description: Reviewed Environment App binding
-    default: ''
   required-workflows:
     description: JSON array of trusted PR validation workflow names on the default branch
     required: true
@@ -35,10 +17,5 @@ runs:
       env:
         PR_NUMBER: ${{ inputs.pull-request-number }}
         REQUIRED_WORKFLOWS: ${{ inputs.required-workflows }}
-        GH_TOKEN: ${{ inputs.token }}
-        AUTHENTICATION: ${{ inputs.authentication }}
-        INSTALLATION_ID: ${{ inputs.installation-id }}
-        EXPECTED_INSTALLATION_ID: ${{ inputs.expected-installation-id }}
-        APP_SLUG: ${{ inputs.app-slug }}
-        EXPECTED_APP_SLUG: ${{ inputs.expected-app-slug }}
+        GH_TOKEN: ${{ github.token }}
       run: node --experimental-strip-types "$GITHUB_ACTION_PATH/merge.mts"

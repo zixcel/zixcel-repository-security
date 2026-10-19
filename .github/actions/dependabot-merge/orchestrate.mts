@@ -10,10 +10,8 @@ export async function merge(repository: string, number: number, api: Client, con
     || requiredWorkflows.some(name => !name.trim() || name.length > 160)) return 'manual: required CI workflow contract missing';
   const p = object(await api(`${prefix}/pulls/${number}`));
   if (!admitPull(p, repository)) return 'manual: author, branch or origin admission';
-  const rules = array(await api(`${prefix}/rules/branches/main`)).map(object);
-  if (!rules.some(r => r.type === 'pull_request') || !rules.some(r => r.type === 'required_status_checks'
-    && object(r.parameters).strict_required_status_checks_policy === true
-    && array(object(r.parameters).required_status_checks).length > 0)) return 'manual: strict required PR checks absent';
+  // GitHub authorizes the repository token and enforces any configured branch rules.
+  // Admission below independently requires trusted successful PR CI, including on private Free plans.
   const head = object(p.head), sha = text(head.sha);
   const commits = array(await api(`${prefix}/pulls/${number}/commits?per_page=100`));
   if (commits.length !== 1 || p.commits !== 1 || !signedCompatibleUpdate(commits[0])) return 'manual: unverified, major or unknown update';

@@ -1,7 +1,9 @@
 import { object, text } from './policy.mts';
 export async function api(path: string, method = 'GET', body?: unknown): Promise<unknown> {
-  const scopeRead = path === 'installation/repositories?per_page=100' && method === 'GET';
-  if ((!path.startsWith('repos/') && !scopeRead) || path.includes('..') || path.includes('://')) throw Error('Invalid API path');
+  const repository = process.env.GITHUB_REPOSITORY ?? '';
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repository) || !path.startsWith(`repos/${repository}/`)
+    || path.includes('..') || path.includes('://') || path.split('?')[0]!.includes('%'))
+    throw Error('Invalid API path or repository scope');
   if (method !== 'GET' && !(method === 'PUT' && /^repos\/[\w.-]+\/[\w.-]+\/pulls\/[1-9]\d*\/merge$/.test(path)))
     throw Error('Only a normal pull request merge may mutate GitHub');
   const token = process.env.GH_TOKEN;

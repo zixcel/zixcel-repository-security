@@ -2,15 +2,9 @@ import { appendFileSync, readFileSync } from 'node:fs';
 import { api, content } from './api.mts';
 import { object, array, text } from './policy.mts';
 import { merge } from './orchestrate.mts';
-import { verifyCredentials } from './credentials.mts';
 const repository = process.env.GITHUB_REPOSITORY ?? '';
 if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) throw Error('Invalid owner repository');
 const prefix = `repos/${repository}`;
-await verifyCredentials(repository, {
-  mode: process.env.AUTHENTICATION ?? 'github-token',
-  installation: process.env.INSTALLATION_ID ?? '', expectedInstallation: process.env.EXPECTED_INSTALLATION_ID ?? '',
-  slug: process.env.APP_SLUG ?? '', expectedSlug: process.env.EXPECTED_APP_SLUG ?? '',
-}, api);
 const workflows = array(JSON.parse(process.env.REQUIRED_WORKFLOWS ?? '[]') as unknown).map(text);
 const event = object(JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH!, 'utf8')) as unknown);
 let numbers: number[] = [];

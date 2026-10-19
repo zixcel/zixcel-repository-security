@@ -47,7 +47,6 @@ updates:
 - package-ecosystem: npm
   directories:
   - /.github/actions/dependabot-merge
-  - /scripts/dependency-app
   schedule:
     interval: daily
     time: '05:00'
