@@ -1,0 +1,17 @@
+name: Verified Dependabot merge
+description: Merge compatible signed dependency-only updates after successful owner checks
+inputs:
+  pull-request-number:
+    description: Optional PR number for owner workflow_dispatch
+    default: ''
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+      with:
+        node-version: '24'
+    - shell: bash
+      env:
+        PR_NUMBER: ${{ inputs.pull-request-number }}
+        GH_TOKEN: ${{ github.token }}
+      run: node --experimental-strip-types "$GITHUB_ACTION_PATH/merge.mts"
