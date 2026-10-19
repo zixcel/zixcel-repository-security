@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { merge, type Client } from './orchestrate.mts';
 const repo = 'example/project', sha = 'a'.repeat(40), merged = 'b'.repeat(40);
-interface Scenario { failure?: string; unprotected?: boolean; major?: boolean; scripts?: boolean; conflict?: boolean; pending?: boolean; }
+interface Scenario { failure?: string; unprotected?: boolean; major?: boolean; scripts?: boolean; conflict?: boolean; pending?: boolean; staleBase?: boolean; }
 function scenario(options: Scenario = {}) {
   let writes = 0;
   const api: Client = async (path, method) => {
@@ -17,6 +17,7 @@ function scenario(options: Scenario = {}) {
       base: { repo: { full_name: repo }, ref: 'main', sha: 'c'.repeat(40) }, merged: writes > 0, merge_commit_sha: merged };
     if (path.endsWith('/rules/branches/main')) return options.unprotected ? [] : [{ type: 'pull_request' },
       { type: 'required_status_checks', parameters: { strict_required_status_checks_policy: true, required_status_checks: [{}] } }];
+    if (path.endsWith('/git/ref/heads/main')) return { object: { type: 'commit', sha: 'd'.repeat(40) } };
     if (path.includes('/commits?')) return [{ author: { login: 'dependabot[bot]', id: 49699333 },
       commit: { verification: { verified: true }, message: `Bumps x from 1.0.0 to ${options.major ? '2.0.0' : '1.0.1'}\n\n---\nupdated-dependencies:\n- dependency-name: x\n  update-type: version-update:semver-${options.major ? 'major' : 'patch'}\n...` } }];
     if (path.includes('/files?')) return [{ filename: 'package.json', status: 'modified' }];
@@ -24,7 +25,7 @@ function scenario(options: Scenario = {}) {
       status: 'completed', conclusion: options.failure ?? 'success' }] };
     if (path.endsWith('/status')) return { total_count: 0, state: 'pending' };
     if (path.includes('/actions/runs?')) return { total_count: 1, workflow_runs: [{ status: options.pending ? 'in_progress' : 'completed', conclusion: 'success' }] };
-    if (path.includes('/compare/')) return { behind_by: 0 };
+    if (path.includes('/compare/')) return { behind_by: options.staleBase && path.includes('d'.repeat(40)) ? 1 : 0 };
     throw Error('Unexpected test API path');
   };
   let manifests = 0;
@@ -46,4 +47,10 @@ test('unprotected, major and package behavior changes need individual review', a
 });
 test('a conflicting or stale write is never replayed or bypassed', async () => {
   const s = scenario({ conflict: true }); await assert.rejects(s.run(), /409/); assert.equal(s.writes(), 1);
+});
+
+test('stale PR base metadata cannot authorize a merge against an older main', async () => {
+  const s = scenario({ staleBase: true });
+  assert.match(await s.run(), /rebase against current main/);
+  assert.equal(s.writes(), 0);
 });

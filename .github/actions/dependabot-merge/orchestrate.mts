@@ -10,15 +10,20 @@ export async function merge(repository: string, number: number, api: Client, con
   if (!rules.some(r => r.type === 'pull_request') || !rules.some(r => r.type === 'required_status_checks'
     && object(r.parameters).strict_required_status_checks_policy === true
     && array(object(r.parameters).required_status_checks).length > 0)) return 'manual: strict required PR checks absent';
-  const head = object(p.head), sha = text(head.sha), base = object(p.base);
+  const head = object(p.head), sha = text(head.sha);
   const commits = array(await api(`${prefix}/pulls/${number}/commits?per_page=100`));
   if (commits.length !== 1 || p.commits !== 1 || !signedCompatibleUpdate(commits[0])) return 'manual: unverified, major or unknown update';
   const files = array(await api(`${prefix}/pulls/${number}/files?per_page=100`));
   if (!admitFiles(files, p.changed_files)) return 'manual: change outside dependency definitions';
+  const main = object(object(await api(`${prefix}/git/ref/heads/main`)).object);
+  if (main.type !== 'commit' || !/^[a-f0-9]{40}$/.test(text(main.sha))) throw Error('Invalid live main identity');
+  const baseSha = text(main.sha);
+  const compare = object(await api(`${prefix}/compare/${baseSha}...${sha}`));
+  if (compare.behind_by !== 0) return 'waiting: rebase against current main';
   for (const file of files) {
     const path = text(object(file).filename);
     if (path.endsWith('package.json') && !unchangedNpmStructure(
-      await content(repository, path, text(base.sha)), await content(repository, path, sha))) return 'manual: package behavior changed';
+      await content(repository, path, baseSha), await content(repository, path, sha))) return 'manual: package behavior changed';
   }
   if (!admitChecks(await api(`${prefix}/commits/${sha}/check-runs?per_page=100`))) return 'waiting: CI failure, absent, untrusted or incomplete';
   const status = object(await api(`${prefix}/commits/${sha}/status`));
@@ -26,8 +31,7 @@ export async function merge(repository: string, number: number, api: Client, con
   const runs = object(await api(`${prefix}/actions/runs?event=pull_request&head_sha=${sha}&per_page=100`));
   const workflowRuns = array(runs.workflow_runs).map(object);
   if (workflowRuns.length !== runs.total_count || workflowRuns.some(r => r.status !== 'completed' || r.conclusion !== 'success')) return 'waiting: PR workflows not all successful';
-  const compare = object(await api(`${prefix}/compare/${text(base.sha)}...${sha}`));
-  if (compare.behind_by !== 0) return 'waiting: rebase against current main';
+
   // The normal endpoint enforces rulesets. It has no admin/bypass mode.
   const result = object(await api(`${prefix}/pulls/${number}/merge`, 'PUT', { sha, merge_method: 'squash' }));
   const observed = object(await api(`${prefix}/pulls/${number}`));
