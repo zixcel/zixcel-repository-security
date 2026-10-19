@@ -25,7 +25,11 @@ export async function serve(session: Session,onFinish: (state:'complete'|'stoppe
     if (req.method !== 'GET' || `http://${req.headers.host}` !== origin)
       return html(res,'Request rejected',403);
     const url = new URL(req.url ?? '/',origin);
+    const installationPage = (): void => html(res,
+      `<h1>App verified</h1><p>Select only ${escape(session.repository)} on GitHub.</p>`+
+      `<a href="https://github.com/apps/${session.slug}/installations/new">Install the private App</a>`);
     if (url.pathname === `/setup/${nonce}`) {
+      if (phase === 'install') return installationPage();
       if (phase !== 'register') return html(res,`Setup phase: ${phase}`);
       const data = manifest(session.owner,`${origin}/registered/${nonce}`);
       return html(res,`<h1>Register a private dependency App</h1><p>Owner: ${escape(session.owner)}. `+
@@ -43,8 +47,7 @@ export async function serve(session: Session,onFinish: (state:'complete'|'stoppe
       phase = 'converting';
       await session.registered(code);
       phase = 'install';
-      return html(res,`<h1>App verified</h1><p>Select only ${escape(session.repository)} on GitHub.</p>`+
-        `<a href="https://github.com/apps/${session.slug}/installations/new">Install the private App</a>`);
+      return installationPage();
     }
     if (url.pathname === `/installed/${nonce}`) {
       const installation = url.searchParams.get('installation_id') ?? '';

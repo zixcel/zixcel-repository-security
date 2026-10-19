@@ -15,6 +15,8 @@ test('loopback manifest callback rejects CSRF, malformed codes and replay',async
     assert.equal((await fetch(callback+`?code=bad&state=${state}`)).status,403);assert.deepEqual(calls,[]);
     const valid=callback+`?code=${'a'.repeat(40)}&state=${state}`;
     assert.equal((await fetch(valid)).status,200);
+    assert.match(await(await fetch(s.url)).text(),/Install the private App/);
+    assert.deepEqual(calls,['registered']);
     assert.equal((await fetch(valid)).status,403);
     assert.equal((await fetch(s.url.replace('/setup/','/installed/')+'?installation_id=42')).status,200);
     assert.deepEqual(calls,['registered','installed','complete']);
