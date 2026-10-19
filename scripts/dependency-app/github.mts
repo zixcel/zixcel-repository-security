@@ -14,7 +14,8 @@ export const gh: Client = async (path,method='GET',body) => {
   pathAllowed(path);
   try {
     const result = execFileSync('gh',['api',path,'--method',method,...(body ? ['--input','-'] : [])],
-      {encoding:'utf8',input:body ? JSON.stringify(body) : undefined,maxBuffer:4_000_000,stdio:['pipe','pipe','pipe']});
+      {encoding:'utf8',input:body ? JSON.stringify(body) : undefined,maxBuffer:4_000_000,
+        timeout:45000,stdio:['pipe','pipe','pipe']});
     return result.trim() ? JSON.parse(result) as unknown : null;
   } catch (error) {
     const output = object(error).stdout;
@@ -54,6 +55,6 @@ export async function absent(path: string, client: Client): Promise<void> {
 export function installSecret(repository: string,environment: string,key: string): void {
   try {
     execFileSync('gh',['secret','set','DEPENDENCY_MERGE_PRIVATE_KEY','--repo',repository,'--env',environment],
-      {input:key,stdio:['pipe','pipe','pipe'],maxBuffer:100000});
+      {input:key,stdio:['pipe','pipe','pipe'],timeout:60000,maxBuffer:100000});
   } catch {throw Error('Secret registration unverified; do not replay writes');}
 }
