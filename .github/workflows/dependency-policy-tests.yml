@@ -26,3 +26,4 @@ jobs:
       - run: pnpm --dir scripts/dependency-app install --frozen-lockfile --ignore-scripts
       - run: pnpm --dir scripts/dependency-app test
       - run: pnpm --dir scripts/dependency-app typecheck
+      - run: pnpm --dir scripts/dependency-app audit --prod
