@@ -1,9 +1,13 @@
-import { object, array, text, admitPull, admitFiles, admitChecks, signedCompatibleUpdate, unchangedNpmStructure } from './policy.mts';
+import { object, array, text, admitPull, admitFiles, admitChecks, signedCompatibleUpdate, admitNpmUpdate } from './policy.mts';
 export type Client = (path: string, method?: string, body?: unknown) => Promise<unknown>;
 export type Content = (repository: string, path: string, ref: string) => Promise<unknown>;
-export async function merge(repository: string, number: number, api: Client, content: Content): Promise<string> {
+export async function merge(repository: string, number: number, api: Client, content: Content,
+  requiredWorkflows: readonly string[]): Promise<string> {
   const prefix = `repos/${repository}`;
   if (!Number.isSafeInteger(number) || number < 1) throw Error('Invalid pull request number');
+  if (!requiredWorkflows.length || requiredWorkflows.length > 20
+    || new Set(requiredWorkflows).size !== requiredWorkflows.length
+    || requiredWorkflows.some(name => !name.trim() || name.length > 160)) return 'manual: required CI workflow contract missing';
   const p = object(await api(`${prefix}/pulls/${number}`));
   if (!admitPull(p, repository)) return 'manual: author, branch or origin admission';
   const rules = array(await api(`${prefix}/rules/branches/main`)).map(object);
@@ -22,7 +26,7 @@ export async function merge(repository: string, number: number, api: Client, con
   if (compare.behind_by !== 0) return 'waiting: rebase against current main';
   for (const file of files) {
     const path = text(object(file).filename);
-    if (path.endsWith('package.json') && !unchangedNpmStructure(
+    if (path.endsWith('package.json') && !admitNpmUpdate(
       await content(repository, path, baseSha), await content(repository, path, sha))) return 'manual: package behavior changed';
   }
   if (!admitChecks(await api(`${prefix}/commits/${sha}/check-runs?per_page=100`))) return 'waiting: CI failure, absent, untrusted or incomplete';
@@ -30,7 +34,19 @@ export async function merge(repository: string, number: number, api: Client, con
   if (status.total_count !== 0 && status.state !== 'success') return 'waiting: legacy status checks';
   const runs = object(await api(`${prefix}/actions/runs?event=pull_request&head_sha=${sha}&per_page=100`));
   const workflowRuns = array(runs.workflow_runs).map(object);
-  if (workflowRuns.length !== runs.total_count || workflowRuns.some(r => r.status !== 'completed' || r.conclusion !== 'success')) return 'waiting: PR workflows not all successful';
+  if (!workflowRuns.length || workflowRuns.length !== runs.total_count
+    || workflowRuns.some(r => r.status !== 'completed' || r.conclusion !== 'success')) return 'waiting: PR workflows not all successful';
+  if (workflowRuns.some(r => r.head_sha !== sha || r.event !== 'pull_request'
+    || object(r.actor).login !== 'dependabot[bot]' || object(r.actor).id !== 49699333)) return 'manual: CI does not attest the current Bot head';
+  const registry = object(await api(`${prefix}/actions/workflows?per_page=100`));
+  const workflows = array(registry.workflows).map(object);
+  if (workflows.length !== registry.total_count) return 'manual: incomplete workflow registry';
+  for (const name of requiredWorkflows) {
+    const matching = workflows.filter(w => w.name === name && w.state === 'active'
+      && text(w.path).startsWith('.github/workflows/'));
+    if (matching.length !== 1 || !Number.isSafeInteger(matching[0]!.id)) return 'manual: required workflow absent or ambiguous';
+    if (!workflowRuns.some(r => r.workflow_id === matching[0]!.id)) return 'waiting: required validation workflow absent';
+  }
 
   // The normal endpoint enforces rulesets. It has no admin/bypass mode.
   const result = object(await api(`${prefix}/pulls/${number}/merge`, 'PUT', { sha, merge_method: 'squash' }));

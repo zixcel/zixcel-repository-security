@@ -10,10 +10,20 @@ export const text = (x: unknown): string => {
   if (typeof x !== 'string') throw Error('Invalid API string');
   return x;
 };
+function compatibleVersion(from: string, to: string): boolean {
+  const valid = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+  if (!valid.test(from) || !valid.test(to)) return false;
+  const a = from.split('.').map(Number), b = to.split('.').map(Number);
+  return [...a, ...b].every(Number.isSafeInteger) && a[0] === b[0] && (a[0] !== 0 || a[1] === b[1])
+    && (b[1]! > a[1]! || (b[1] === a[1] && b[2]! > a[2]!));
+}
 export function signedCompatibleUpdate(value: unknown): boolean {
-  const commit = object(value), author = object(commit.author);
+  const commit = object(value), author = object(commit.author), committer = object(commit.committer);
   const detail = object(commit.commit), verification = object(detail.verification);
-  if (author.login !== 'dependabot[bot]' || author.id !== 49699333 || verification.verified !== true) return false;
+  const trustedCommitter = (committer.login === 'web-flow' && committer.id === 19864447)
+    || (committer.login === 'dependabot[bot]' && committer.id === 49699333);
+  if (author.login !== 'dependabot[bot]' || author.id !== 49699333 || !trustedCommitter
+    || verification.verified !== true || verification.reason !== 'valid') return false;
   const message = text(detail.message);
   const metadata = message.split('\nupdated-dependencies:\n')[1]?.split('\n...')[0];
   if (!metadata) return false;
@@ -23,11 +33,7 @@ export function signedCompatibleUpdate(value: unknown): boolean {
   if ([...message.matchAll(/^- dependency-name:/gm)].length !== names.length) return false;
   if (!names.length || types.length !== names.length || pairs.length !== names.length) return false;
   if (types.some(t => !['patch', 'minor'].includes(t[1]!))) return false;
-  return pairs.every(pair => {
-    const a = pair[1]!.split('.').map(Number), b = pair[2]!.split('.').map(Number);
-    return a[0] === b[0] && (a[0] !== 0 || a[1] === b[1])
-      && (b[1]! > a[1]! || (b[1] === a[1] && b[2]! >= a[2]!));
-  });
+  return pairs.every(pair => compatibleVersion(pair[1]!, pair[2]!));
 }
 export function admitPull(value: unknown, repository: string): boolean {
   const p = object(value), user = object(p.user), head = object(p.head), base = object(p.base);
@@ -44,12 +50,19 @@ export function admitFiles(value: unknown, count: unknown): boolean {
         && /(^|\/)(package\.json|pnpm-lock\.ya?ml|package-lock\.json|Cargo\.(toml|lock)|pom\.xml|go\.(mod|sum))$/.test(path);
     });
 }
-export function unchangedNpmStructure(before: unknown, after: unknown): boolean {
+export function admitNpmUpdate(before: unknown, after: unknown): boolean {
+  const fields = ['dependencies', 'devDependencies', 'optionalDependencies'];
   const clean = (x: unknown): unknown => Object.fromEntries(Object.entries(object(x))
-    .filter(([key]) => !['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'].includes(key)));
+    .filter(([key]) => !fields.includes(key)));
   const canonical = (x: unknown): string => JSON.stringify(x, (_, v: unknown) =>
     v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort()) : v);
-  return canonical(clean(before)) === canonical(clean(after));
+  if (canonical(clean(before)) !== canonical(clean(after))) return false;
+  return fields.every(field => {
+    const a = object(object(before)[field] ?? {}), b = object(object(after)[field] ?? {});
+    return Object.keys(a).length === Object.keys(b).length && Object.keys(a).every(name =>
+      Object.hasOwn(b, name) && (a[name] === b[name] || (typeof a[name] === 'string'
+        && typeof b[name] === 'string' && compatibleVersion(a[name], b[name]))));
+  });
 }
 export function admitChecks(value: unknown): boolean {
   const response = object(value), checks = array(response.check_runs).map(object);
