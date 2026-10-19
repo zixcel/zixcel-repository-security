@@ -58,6 +58,13 @@ test('checks must be complete, successful, trusted and include real validation',
 test('malformed API objects fail closed', () => {
   for (const f of [() => admitChecks(null), () => admitPull({}, 'example/project'), () => admitFiles({}, 1)]) assert.throws(f);
 });
+test('native Dependabot validation is accepted but cannot replace Actions tests', () => {
+  const native = { ...check(), name: '.github/dependabot.yml', app: { id: 29110 } };
+  assert.equal(admitChecks({ total_count: 2, check_runs: [check(), native] }), true);
+  assert.equal(admitChecks({ total_count: 1, check_runs: [native] }), false);
+  assert.equal(admitChecks({ total_count: 2, check_runs: [check(), { ...native, name: 'test' }] }), false);
+  assert.equal(admitChecks({ total_count: 2, check_runs: [check(), { ...native, conclusion: 'failure' }] }), false);
+});
 
 test('a verified human signature cannot attest Dependabot authorship', () => {
   const c = commit(); c.committer = { login: 'contributor', id: 42 };

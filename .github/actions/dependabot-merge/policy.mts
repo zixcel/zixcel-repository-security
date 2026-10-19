@@ -67,7 +67,8 @@ export function admitNpmUpdate(before: unknown, after: unknown): boolean {
 export function admitChecks(value: unknown): boolean {
   const response = object(value), checks = array(response.check_runs).map(object);
   return checks.length > 0 && checks.length === response.total_count
-    && checks.every(c => c.status === 'completed' && object(c.app).id === 15368
+    && checks.every(c => c.status === 'completed' && (object(c.app).id === 15368
+      || (object(c.app).id === 29110 && c.name === '.github/dependabot.yml'))
       && ['success', 'neutral', 'skipped'].includes(text(c.conclusion)))
-    && checks.some(c => c.conclusion === 'success' && c.name !== 'repository-policy');
+    && checks.some(c => c.conclusion === 'success' && object(c.app).id === 15368 && c.name !== 'repository-policy');
 }
