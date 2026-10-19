@@ -1,8 +1,11 @@
-module github.com/zricethezav/gitleaks/v8
+module github.com/zixcel/zixcel-repository-security/scripts/gitleaks
 
 go 1.26.0
 
+tool github.com/zricethezav/gitleaks/v8
+
 require (
+	github.com/zricethezav/gitleaks/v8 v8.30.1
 	github.com/BobuSumisu/aho-corasick v1.0.3
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/charmbracelet/lipgloss v0.5.0

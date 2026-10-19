@@ -1,16 +1,19 @@
 # Detector dependency maintenance
 
-The hardened detector is built from the immutable upstream commit in
-`../build-gitleaks.sh`. Only the reviewed module manifest/lock is overlaid.
+The maintenance module declares the actual detector as a Go tool. Its version
+`v8.30.1` matches immutable upstream commit
+`83d9cd684c87d95d656c1458ef04895a7f1cbd8e`. The Go tool directive keeps the full
+upstream import graph visible to dependency update jobs without copying detector
+implementation or maintaining a surrogate import list.
 
-`imports.go` records that commit's external production and test imports, without
-copying upstream implementation. Go module maintenance considers the `tools`
-build tag when resolving dependencies. This prevents an update job from pruning
-required imports merely because the detector source is fetched during CI instead
-of being duplicated in this directory. The stub is never copied into the build.
+The existing hardened build verifies this binding and resolves the maintenance
+module with readonly dependencies. It restores the detector's original module
+identity and drops only the maintenance tool/self requirement in the temporary
+pinned source tree. It then runs the unchanged upstream tests, module-integrity
+checks, dependency-license retention and compiled-binary vulnerability gates.
 
-When changing the upstream source pin, review its external import set and refresh
-this list. Every update still builds the full detector from pinned source, runs
-its real upstream tests and module integrity checks, retains dependency licenses,
-and checks the compiled binary for vulnerabilities. No `-mod=readonly` or
-vulnerability guard is removed to make an update pass.
+The source pin, tool version and displayed detector version must be reviewed
+together when upgrading the detector itself. Ordinary dependency updates remain
+independent; no guard or advisory is suppressed to pass an update.
+
+Go tool directives: https://go.dev/doc/modules/managing-dependencies
