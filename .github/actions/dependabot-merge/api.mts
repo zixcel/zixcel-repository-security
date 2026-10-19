@@ -1,6 +1,9 @@
 import { object, text } from './policy.mts';
 export async function api(path: string, method = 'GET', body?: unknown): Promise<unknown> {
-  if (!path.startsWith('repos/') || path.includes('..') || path.includes('://')) throw Error('Invalid API path');
+  const scopeRead = path === 'installation/repositories?per_page=100' && method === 'GET';
+  if ((!path.startsWith('repos/') && !scopeRead) || path.includes('..') || path.includes('://')) throw Error('Invalid API path');
+  if (method !== 'GET' && !(method === 'PUT' && /^repos\/[\w.-]+\/[\w.-]+\/pulls\/[1-9]\d*\/merge$/.test(path)))
+    throw Error('Only a normal pull request merge may mutate GitHub');
   const token = process.env.GH_TOKEN;
   if (!token) throw Error('Missing owner workflow token');
   const response = await fetch(`https://api.github.com/${path}`, {

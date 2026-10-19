@@ -15,8 +15,16 @@ their names and use compatible pinned versions. Peer contracts, scripts,
 engines, overrides, source and workflow changes require individual review.
 Major and zero-major minor updates also require individual review.
 
-The caller supplies the repository-scoped `GITHUB_TOKEN` authority. Normal
+The caller supplies either its workflow token or an explicit repository-scoped
+GitHub App token. App mode verifies the official token action's installation/slug
+against protected Environment bindings, then independently verifies the token can
+access exactly the current repository. App mode never silently falls back to the
+workflow token. Normal
 merge protection remains effective. The action executes no PR source or
 artifacts, performs no publication, and never retries an unverified write.
-An elevated App credential integration requires its own reviewed setup before
-activation; this action does not grant or change repository permissions.
+Use the SHA-pinned official `actions/create-github-app-token` with explicit owner,
+current repository and permission subset. Keep default post-action token revocation
+enabled. Its `client-id` input avoids deprecated App-ID configuration. Store the
+key only in a main-branch-only `dependency-maintenance` Environment, and validate
+the App and installation first. See `scripts/dependency-app/README.md`.
+This action does not register Apps, change rulesets or grant repository permissions.
