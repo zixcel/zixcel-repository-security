@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { admitPull, admitFiles, admitChecks, signedCompatibleUpdate, unchangedNpmStructure } from './policy.mts';
+import { admitPull, admitFiles, admitChecks, signedCompatibleUpdate, admitNpmUpdate } from './policy.mts';
 const commit = (from = '1.2.0', to = '1.3.0', kind = 'minor') => ({
   author: { login: 'dependabot[bot]', id: 49699333 },
-  commit: { verification: { verified: true }, message: `Bumps package from ${from} to ${to}\n\n---\nupdated-dependencies:\n- dependency-name: package\n  update-type: version-update:semver-${kind}\n...` },
+  committer: { login: 'web-flow', id: 19864447 },
+  commit: { verification: { verified: true, reason: 'valid' }, message: `Bumps package from ${from} to ${to}\n\n---\nupdated-dependencies:\n- dependency-name: package\n  update-type: version-update:semver-${kind}\n...` },
 });
 test('signed patch and compatible minor updates are accepted', () => {
   assert.equal(signedCompatibleUpdate(commit()), true);
@@ -42,10 +43,10 @@ test('source, workflow, added files, oversized and truncated sets are refused', 
   assert.equal(admitFiles([], 1), false);
 });
 test('dependency version changes cannot change scripts, engines or overrides', () => {
-  assert.equal(unchangedNpmStructure({ scripts: { test: 'test' }, dependencies: { x: '1' } },
-    { dependencies: { x: '2' }, scripts: { test: 'test' } }), true);
-  assert.equal(unchangedNpmStructure({ scripts: { test: 'test' } }, { scripts: { test: 'skip' } }), false);
-  assert.equal(unchangedNpmStructure({}, { engines: { node: '26' } }), false);
+  assert.equal(admitNpmUpdate({ scripts: { test: 'test' }, dependencies: { x: '1.2.0' } },
+    { dependencies: { x: '1.2.1' }, scripts: { test: 'test' } }), true);
+  assert.equal(admitNpmUpdate({ scripts: { test: 'test' } }, { scripts: { test: 'skip' } }), false);
+  assert.equal(admitNpmUpdate({}, { engines: { node: '26' } }), false);
 });
 const check = (conclusion = 'success', id = 15368) => ({ status: 'completed', conclusion, name: 'test', app: { id } });
 test('checks must be complete, successful, trusted and include real validation', () => {
@@ -56,4 +57,33 @@ test('checks must be complete, successful, trusted and include real validation',
 });
 test('malformed API objects fail closed', () => {
   for (const f of [() => admitChecks(null), () => admitPull({}, 'example/project'), () => admitFiles({}, 1)]) assert.throws(f);
+});
+test('native Dependabot validation is accepted but cannot replace Actions tests', () => {
+  const native = { ...check(), name: '.github/dependabot.yml', app: { id: 29110 } };
+  assert.equal(admitChecks({ total_count: 2, check_runs: [check(), native] }), true);
+  assert.equal(admitChecks({ total_count: 1, check_runs: [native] }), false);
+  assert.equal(admitChecks({ total_count: 2, check_runs: [check(), { ...native, name: 'test' }] }), false);
+  assert.equal(admitChecks({ total_count: 2, check_runs: [check(), { ...native, conclusion: 'failure' }] }), false);
+});
+
+test('a verified human signature cannot attest Dependabot authorship', () => {
+  const c = commit(); c.committer = { login: 'contributor', id: 42 };
+  assert.equal(signedCompatibleUpdate(c), false);
+});
+test('actual npm changes cannot hide a major, rename, URL or peer contract change', () => {
+  const before = { dependencies: { safe: '1.2.0' } };
+  for (const after of [{ dependencies: { safe: '2.0.0' } },
+    { dependencies: { different: '1.2.1' } },
+    { dependencies: { safe: 'https://example.invalid/package.tgz' } }]) {
+    assert.equal(admitNpmUpdate(before, after), false);
+  }
+  assert.equal(admitNpmUpdate({ peerDependencies: { vue: '3.0.0' } },
+    { peerDependencies: { vue: '3.1.0' } }), false);
+});
+
+test('ambiguous, prerelease, unchanged and unsafe integer version claims are refused', () => {
+  for (const [from, to] of [['01.2.0', '1.2.1'], ['1.2.0', '1.2.1-beta.1'],
+    ['1.2.0', '1.2.0'], ['9007199254740992.0.0', '9007199254740992.0.1']]) {
+    assert.equal(signedCompatibleUpdate(commit(from!, to!, 'patch')), false);
+  }
 });

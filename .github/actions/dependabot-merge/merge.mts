@@ -5,6 +5,7 @@ import { merge } from './orchestrate.mts';
 const repository = process.env.GITHUB_REPOSITORY ?? '';
 if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) throw Error('Invalid owner repository');
 const prefix = `repos/${repository}`;
+const workflows = array(JSON.parse(process.env.REQUIRED_WORKFLOWS ?? '[]') as unknown).map(text);
 const event = object(JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH!, 'utf8')) as unknown);
 let numbers: number[] = [];
 const input = process.env.PR_NUMBER;
@@ -21,7 +22,7 @@ else if (event.workflow_run) {
 }
 
 for (const number of [...new Set(numbers)].slice(0, 10)) {
-  const result = await merge(repository, number, api, content);
+  const result = await merge(repository, number, api, content, workflows);
   console.log(`#${number}: ${result}`);
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `- #${number}: ${result}\n`);
 }
