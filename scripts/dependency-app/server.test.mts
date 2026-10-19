@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {serve} from './server.mts';
+test('personal-account Apps use the official personal manifest endpoint',async()=>{
+  const s=await serve({owner:'example',ownerType:'User',slug:'example-dependency-merge',
+    repository:'example/project',registered:async()=>{},installed:async()=>{}},()=>{});
+  try {
+    const page=await(await fetch(s.url)).text();
+    assert.match(page,/action="https:\/\/github.com\/settings\/apps\/new\?state=/);
+    assert.doesNotMatch(page,/github.com\/organizations/);
+  } finally {s.close();}
+});
 test('loopback manifest callback rejects CSRF, malformed codes and replay',async()=>{
   const calls:string[]=[];
   const s=await serve({owner:'example',slug:'example-dependency-merge',repository:'example/project',

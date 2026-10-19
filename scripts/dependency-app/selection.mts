@@ -10,10 +10,16 @@ export function configuredRepositories(config: Json): string[] {
     throw Error('Select one owner with 1 to 100 unique repositories');
   return names;
 }
-export function target(value: unknown,repository:string): Target {
+export function configuredPrivateRepositories(config:Json,repositories:readonly string[]):string[] {
+  const names=list(config.privateRepositories ?? []).map(repositoryName);
+  if(new Set(names).size !== names.length || names.some(n=>!repositories.includes(n)))
+    throw Error('Private repository selection must be a unique explicit subset');
+  return names;
+}
+export function target(value: unknown,repository:string,expectedPrivate=false,ownerType='Organization'): Target {
   const r=object(value),owner=object(r.owner);
-  if (r.full_name !== repository || owner.type !== 'Organization' || r.default_branch !== 'main'
-    || r.private !== false || r.archived !== false || object(r.permissions).admin !== true)
+  if (r.full_name !== repository || owner.type !== ownerType || r.default_branch !== 'main'
+    || r.private !== expectedPrivate || r.archived !== false || object(r.permissions).admin !== true)
     throw Error('Repository binding mismatch');
   return {repository,repoId:id(r.id),ownerId:id(owner.id)};
 }

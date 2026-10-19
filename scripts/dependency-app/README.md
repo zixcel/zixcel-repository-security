@@ -47,3 +47,11 @@ A configuration may use `repositories` instead of `repository`: a nonempty, uniq
 Before any key registration, all destinations must pass inactive/main-only checks. One metadata-only discovery token verifies the entire selected installation; separate write tokens each explicitly select exactly one repository and are independently revoked. The owner key is encrypted into each repository's main-only Environment, never a shared cross-owner credential. Keys are registered only after all token probes succeed. Partial writes are recorded per repository and never silently replayed. Registration still does not grant a ruleset bypass or enable merging.
 
 For multiple owners, run `open-batch-local.sh` with the reviewed local configuration paths. It processes one owner at a time, stops on any failure, and does not retry or skip an existing registration. Finish the pilot's live acceptance before using this rollout path.
+
+## Private repositories
+
+Private repositories may participate under the same merge policy. Add their exact names to the configuration's `privateRepositories` subset as well as `repositories`; omission keeps the public-only default and a visibility change is rejected. Organization and personal-account Apps use their respective official manifest registration URLs. Never turn a repository public to pass admission.
+
+Before any Environment/key registration, private targets must expose effective main PR, strict GitHub Actions required checks, deletion and force-push protection. Actions must be enabled and the current main's complete trusted checks must succeed, including real validation. The merge policy is reused for this admission. These checks are repeated before binding private credentials. Unsupported plans, unavailable policy APIs, missing/failed CI and broad/tag-only Environments fail closed; no unprotected credential fallback or paid-plan change is implemented.
+
+Documentation-only and review-only repositories with Actions intentionally disabled are not merge targets. A successful synthetic test is not a live private-repository acceptance. Enable the required plan/protection and resolve CI blockers before registering a private target's App credential.
