@@ -23,7 +23,14 @@ export GOPRIVATE='' GONOSUMDB='' GONOPROXY='' GOFLAGS=-p=2 GOMAXPROCS=2
 export GOPATH="$work/modules" GOCACHE="$work/cache" CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GOAMD64=v1
 mkdir -m 700 "$output"
 (
+    cd "$recipe/gitleaks"
+    # A real tool directive keeps its complete import graph visible to update jobs.
+    [[ "$("$work/go/bin/go" mod edit -json | jq -r '.Require[] | select(.Path == "github.com/zricethezav/gitleaks/v8") | .Version')" == v8.30.1 ]] || exit 1
+    "$work/go/bin/go" list -mod=readonly -deps github.com/zricethezav/gitleaks/v8 > "$work/maintenance-imports.txt"
     cd "$source"
+    # Restore the immutable detector's original module identity for its actual build.
+    "$work/go/bin/go" mod edit -module=github.com/zricethezav/gitleaks/v8 \
+        -droptool=github.com/zricethezav/gitleaks/v8 -droprequire=github.com/zricethezav/gitleaks/v8
     "$work/go/bin/go" mod verify
     "$work/go/bin/go" list -mod=readonly -deps . | jq -R -s 'split("\n")|map(select(length > 0))' > "$output/imports.json"
     "$work/go/bin/go" test -mod=readonly ./...
