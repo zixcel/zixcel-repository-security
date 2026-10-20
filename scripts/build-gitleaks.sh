@@ -17,6 +17,10 @@ git init -q "$source"
 git -C "$source" fetch -q --depth 1 https://github.com/gitleaks/gitleaks.git 83d9cd684c87d95d656c1458ef04895a7f1cbd8e
 git -C "$source" checkout -q --detach FETCH_HEAD
 [[ "$(git -C "$source" rev-parse HEAD)" == 83d9cd684c87d95d656c1458ef04895a7f1cbd8e ]] || exit 1
+(
+    cd "$source"
+    "$work/go/bin/go" mod edit -json > "$work/upstream-module.json"
+)
 cp "$recipe/gitleaks/go.mod" "$recipe/gitleaks/go.sum" "$source/"
 export GOENV=off GOTOOLCHAIN=local GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org
 export GOPRIVATE='' GONOSUMDB='' GONOPROXY='' GOFLAGS=-p=2 GOMAXPROCS=2
@@ -35,8 +39,18 @@ mkdir -m 700 "$output"
     # Restore the immutable detector's original module identity for its actual build.
     "$work/go/bin/go" mod edit -module=github.com/zricethezav/gitleaks/v8 \
         -droptool=github.com/zricethezav/gitleaks/v8 -droprequire=github.com/zricethezav/gitleaks/v8
+    # Restore upstream direct-root classification without changing reviewed versions.
+    "$work/go/bin/go" mod edit -json > "$work/reviewed-module.json"
+    while IFS= read -r module; do
+        version=$(jq -er --arg module "$module" '.Require[] | select(.Path == $module) | .Version' "$work/reviewed-module.json")
+        "$work/go/bin/go" mod edit -require="$module@$version"
+    done < <(jq -r '.Require[] | select(.Indirect != true) | .Path' "$work/upstream-module.json")
     "$work/go/bin/go" mod verify
-    "$work/go/bin/go" list -mod=readonly -deps . | jq -R -s 'split("\n")|map(select(length > 0))' > "$output/imports.json"
+    if ! "$work/go/bin/go" list -mod=readonly -deps . > "$work/actual-imports.txt"; then
+        "$work/go/bin/go" mod tidy -diff
+        exit 1
+    fi
+    jq -R -s 'split("\n")|map(select(length > 0))' "$work/actual-imports.txt" > "$output/imports.json"
     "$work/go/bin/go" test -mod=readonly ./...
     "$work/go/bin/go" build -mod=readonly -trimpath -buildvcs=false \
         -ldflags='-w -buildid= -X=github.com/zricethezav/gitleaks/v8/version.Version=8.30.1-hardened' \
