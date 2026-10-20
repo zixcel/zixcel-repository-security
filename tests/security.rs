@@ -146,7 +146,7 @@ fn unicode_full_casefold_and_nfkc() {
 #[test]
 fn literal_toml_escapes_meta_and_quotes() {
     let compiled = defs::literals(&[term("Ａ.+[X]\"\\")]).unwrap();
-    let value: toml::Value = std::str::from_utf8(&compiled).unwrap().parse().unwrap();
+    let value: toml::Value = toml::from_str(std::str::from_utf8(&compiled).unwrap()).unwrap();
     assert_eq!(
         value["rules"][0]["regex"].as_str().unwrap(),
         "(?:a\\.\\+\\[x\\]\"\\\\)"
@@ -155,10 +155,8 @@ fn literal_toml_escapes_meta_and_quotes() {
 #[test]
 fn regex_native_fields_roundtrip() {
     let (_,regex)=defs::validate(&document(vec![json!({"id":"pattern-01","kind":"regex","regex":"(SYNTHETIC_[0-9]{4})","secretGroup":1,"entropy":0.0,"keywords":["SYNTHETIC_"]})])).unwrap();
-    let doc: toml::Value = String::from_utf8(defs::patterns(&regex).unwrap())
-        .unwrap()
-        .parse()
-        .unwrap();
+    let doc: toml::Value =
+        toml::from_str(&String::from_utf8(defs::patterns(&regex).unwrap()).unwrap()).unwrap();
     assert_eq!(doc["rules"][0]["secretGroup"].as_integer(), Some(1));
 }
 #[test]
