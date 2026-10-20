@@ -27,6 +27,7 @@ jobs:
         run: |
           cargo fmt --check
           cargo clippy --locked --all-targets -- -D warnings
+          bash tests/engine-candidate.sh
       - name: Build and audit curated Gitleaks
         run: bash scripts/build-gitleaks.sh "$RUNNER_TEMP/curated-engine"
       - name: Rebuild the independently pinned detector baseline
@@ -48,3 +49,11 @@ jobs:
         run: |
           cargo run --locked -- check-oss-policy --root "$PWD"
           cargo package --locked
+      - name: Record audited detector distribution candidate
+        run: bash scripts/engine-candidate.sh "$RUNNER_TEMP/curated-engine" "$RUNNER_TEMP/engine-candidate"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: detector-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/engine-candidate/
+          if-no-files-found: error
+          retention-days: 30

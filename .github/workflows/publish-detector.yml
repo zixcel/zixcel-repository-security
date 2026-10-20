@@ -1,0 +1,94 @@
+name: Publish reviewed detector
+on:
+  workflow_dispatch:
+    inputs:
+      candidate-run:
+        description: Successful main CI run containing reviewed detector artifact
+        required: true
+        type: string
+      archive-sha256:
+        description: Owner-approved exact archive SHA256
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: reviewed-detector-release
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'zixcel/zixcel-repository-security' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      artifact: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Require exact main candidate and all owner validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN: ${{ inputs.candidate-run }}
+          ARCHIVE_SHA: ${{ inputs.archive-sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$CANDIDATE_RUN" =~ ^[0-9]+$ && "$ARCHIVE_SHA" =~ ^[a-f0-9]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CANDIDATE_RUN" > "$RUNNER_TEMP/run.json"
+          jq -e --arg sha "$GITHUB_SHA" '.head_sha==$sha and .head_branch=="main" and .event=="push" and .conclusion=="success" and .path==".github/workflows/ci.yml" and .head_repository.full_name=="zixcel/zixcel-repository-security"' "$RUNNER_TEMP/run.json"
+          for workflow in ci.yml oss-policy.yml dependency-policy-tests.yml; do
+            gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs?head_sha=$GITHUB_SHA&per_page=100" |
+              jq -e --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha==$sha and .head_branch=="main" and .event=="push")]|sort_by(.run_number)|last|.conclusion=="success"'
+          done
+          attempt=$(jq -er '.run_attempt' "$RUNNER_TEMP/run.json")
+          gh run download "$CANDIDATE_RUN" --repo "$GITHUB_REPOSITORY" --name "detector-$GITHUB_SHA-$attempt" --dir "$RUNNER_TEMP/candidate"
+          bash scripts/verify-engine-candidate.sh "$RUNNER_TEMP/candidate" "$GITHUB_SHA"
+          test "$(jq -r '.files["gitleaks_8.30.1_hardened_linux_x64.tar.gz"]' "$RUNNER_TEMP/candidate/candidate.json")" = "$ARCHIVE_SHA"
+          gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/gitleaks/v8.30.1-r1" |
+            jq -e --arg sha "$GITHUB_SHA" '.object.type=="commit" and .object.sha==$sha'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        id: upload
+        with:
+          name: reviewed-detector-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/candidate/
+          if-no-files-found: error
+          retention-days: 30
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          artifact-ids: ${{ needs.verify.outputs.artifact }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/candidate
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+        with:
+          subject-path: ${{ runner.temp }}/candidate/*.tar.gz
+      - name: Publish exact approved bytes once and verify readback
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARCHIVE_SHA: ${{ inputs.archive-sha256 }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/candidate"
+          archive=gitleaks_8.30.1_hardened_linux_x64.tar.gz
+          test "$(sha256sum "$archive" | cut -d ' ' -f 1)" = "$ARCHIVE_SHA"
+          tag=gitleaks/v8.30.1-r1
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" > "$RUNNER_TEMP/release.json" 2> "$RUNNER_TEMP/release-error"; then
+            jq -e --arg sha "$GITHUB_SHA" '.target_commitish==$sha and .draft==false and .prerelease==false' "$RUNNER_TEMP/release.json"
+          else
+            grep -q '(HTTP 404)' "$RUNNER_TEMP/release-error"
+            test "$GITHUB_RUN_ATTEMPT" = 1
+            gh release create "$tag" ./* --repo "$GITHUB_REPOSITORY" --verify-tag --target "$GITHUB_SHA" --title 'Hardened Gitleaks 8.30.1 revision 1' --notes "Detector component only; Linux amd64. Source $GITHUB_SHA; archive SHA256 $ARCHIVE_SHA. Existing production pin is updated through a separate reviewed PR."
+          fi
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$archive" --dir "$RUNNER_TEMP/readback"
+          test "$(sha256sum "$RUNNER_TEMP/readback/$archive" | cut -d ' ' -f 1)" = "$ARCHIVE_SHA"
