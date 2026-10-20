@@ -17,3 +17,11 @@ together when upgrading the detector itself. Ordinary dependency updates remain
 independent; no guard or advisory is suppressed to pass an update.
 
 Go tool directives: https://go.dev/doc/modules/managing-dependencies
+
+`upstream_tests_test.go` retains the immutable detector's test-only dependency
+roots during Dependabot tidy. Tool directives alone retain production imports,
+not the tool module's test imports. These explicit roots do not replace or skip
+upstream tests. The temporary source build continues using readonly module
+resolution, checksum verification, actual upstream tests and binary vulnerability
+checks; missing closure still rejects the candidate. Remove a root only after
+checking the pinned detector source no longer imports it.
