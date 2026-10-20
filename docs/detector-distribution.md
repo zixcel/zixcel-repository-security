@@ -2,8 +2,9 @@
 
 The repository owns its curated Gitleaks build and its dependency licenses.
 The retired vPremises archive URL is not a working distribution route.
-Current production pin values remain unchanged until an actual published archive
-has been independently accepted. Source CI success alone does not repair that URL.
+The production pin now selects the published component archive and its exact
+source recipe. Anonymous archive bytes and signature provenance must be accepted
+before production provisioning succeeds. Source CI alone does not repair a URL.
 
 Successful owner CI records the tested detector archive, executable digest,
 source identity, exact Go module locks, compiled imports and vulnerability evidence
@@ -21,10 +22,10 @@ the downloaded archive. Existing assets are never replaced; failed attempts must
 be inspected before any retry. No cloud credential, external App or central
 execution repository is needed.
 
-This releases the detector component, not a new Rust scanner package. Afterwards,
-review the canonical download URL, archive/executable hashes and production build
-recipe together in a normal source PR. Verify provisioning from the anonymous
-published archive and real scanner consumers before removing the historical
-production-recipe fallback. Do not mark that separate acceptance complete merely
-because the component was published. GitHub provenance identifies the trusted
+This releases the detector component, not a new Rust scanner package. Production
+CI binds the canonical URL, archive/executable hashes and published recipe together.
+It freshly rebuilds/audits that recipe and independently verifies and provisions
+the actual published archive before running scanner regressions. The old recipe
+is no longer a fallback. Future pin changes require the same source review and
+independent consumer acceptance. GitHub provenance identifies the trusted
 publishing workflow and source; it does not independently prove every test claim.

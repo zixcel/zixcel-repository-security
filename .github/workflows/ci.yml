@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  attestations: read
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -30,14 +31,35 @@ jobs:
           bash tests/engine-candidate.sh
       - name: Build and audit curated Gitleaks
         run: bash scripts/build-gitleaks.sh "$RUNNER_TEMP/curated-engine"
-      - name: Rebuild the independently pinned detector baseline
+      - name: Rebuild and freshly audit the published detector recipe
         run: |
+          published_source=$(jq -er ' .source ' tests/gitleaks-pin.json)
+          [[ "$published_source" =~ ^[a-f0-9]{40}$ ]]
           git init -q "$RUNNER_TEMP/pinned-detector-recipe"
-          git -C "$RUNNER_TEMP/pinned-detector-recipe" fetch -q --depth 1 https://github.com/zixcel/zixcel-repository-security.git 02f4e9a6318208c4516dd6b274349de1275b323d
+          git -C "$RUNNER_TEMP/pinned-detector-recipe" fetch -q --depth 1 https://github.com/zixcel/zixcel-repository-security.git "$published_source"
           git -C "$RUNNER_TEMP/pinned-detector-recipe" checkout -q --detach FETCH_HEAD
-          test "$(git -C "$RUNNER_TEMP/pinned-detector-recipe" rev-parse HEAD)" = 02f4e9a6318208c4516dd6b274349de1275b323d
+          test "$(git -C "$RUNNER_TEMP/pinned-detector-recipe" rev-parse HEAD)" = "$published_source"
           bash "$RUNNER_TEMP/pinned-detector-recipe/scripts/build-gitleaks.sh" "$RUNNER_TEMP/production-engine"
-          cargo run --locked -- provision-gitleaks --executable "$RUNNER_TEMP/production-engine/gitleaks" --output-directory "$RUNNER_TEMP/zixcel-gitleaks-production"
+          cargo run --locked -- provision-gitleaks --executable "$RUNNER_TEMP/production-engine/gitleaks" --output-directory "$RUNNER_TEMP/zixcel-gitleaks-reproduced"
+      - name: Verify and provision the anonymous published production archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/published-detector.tar.gz"
+          url=$(jq -er '.url' tests/gitleaks-pin.json)
+          digest=$(jq -er '.archive_sha256' tests/gitleaks-pin.json)
+          source=$(jq -er '.source' tests/gitleaks-pin.json)
+          curl --disable --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --max-time 120 --max-filesize 67108864 "$url" --output "$archive"
+          printf '%s  %s\n' "$digest" "$archive" | sha256sum --check --strict
+          gh attestation verify "$archive" --repo zixcel/zixcel-repository-security --signer-workflow zixcel/zixcel-repository-security/.github/workflows/publish-detector.yml --source-digest "$source" --signer-digest "$source" --source-ref refs/heads/main --deny-self-hosted-runners --format json > "$RUNNER_TEMP/detector-provenance.json"
+          cargo run --locked -- provision-gitleaks --archive "$archive" --output-directory "$RUNNER_TEMP/zixcel-gitleaks-production"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: detector-provenance-${{ github.sha }}
+          path: ${{ runner.temp }}/detector-provenance.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Bind audited candidate bytes to the scanner test configuration
         run: bash scripts/candidate-engine-config.sh "$RUNNER_TEMP/curated-engine" "$RUNNER_TEMP/candidate-engine-config.json"
       - name: Test candidate detection and pinned production provisioning
