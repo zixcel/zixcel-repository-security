@@ -26,7 +26,11 @@ mkdir -m 700 "$output"
     cd "$recipe/gitleaks"
     # A real tool directive keeps its complete import graph visible to update jobs.
     [[ "$("$work/go/bin/go" mod edit -json | jq -r '.Require[] | select(.Path == "github.com/zricethezav/gitleaks/v8") | .Version')" == v8.30.1 ]] || exit 1
-    "$work/go/bin/go" list -mod=readonly -deps github.com/zricethezav/gitleaks/v8 > "$work/maintenance-imports.txt"
+    if ! "$work/go/bin/go" list -mod=readonly -deps github.com/zricethezav/gitleaks/v8 > "$work/maintenance-imports.txt"; then
+        # Print a proposal only; never repair reviewed locks during a build.
+        "$work/go/bin/go" mod tidy -diff
+        exit 1
+    fi
     cd "$source"
     # Restore the immutable detector's original module identity for its actual build.
     "$work/go/bin/go" mod edit -module=github.com/zricethezav/gitleaks/v8 \
