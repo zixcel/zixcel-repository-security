@@ -168,8 +168,10 @@ pub fn oss(root: &Path) -> Result<()> {
                 && ![".env.example", ".env.sample", ".env.template"].contains(&first));
         require(!forbidden)?;
     }
-    let cargo: toml::Value =
-        std::str::from_utf8(&io::read(&root.join("Cargo.toml"), MAX_FILE)?)?.parse()?;
+    let cargo: toml::Value = toml::from_str(std::str::from_utf8(&io::read(
+        &root.join("Cargo.toml"),
+        MAX_FILE,
+    )?)?)?;
     require(cargo["package"]["license"].as_str() == Some("Apache-2.0"))?;
     if root.join("package.json").exists() {
         require(io::load(&root.join("package.json"))?["license"] == "Apache-2.0")?;

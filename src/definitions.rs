@@ -138,9 +138,9 @@ pub fn patterns(regexes: &[Value]) -> Result<Vec<u8>> {
     )
 }
 pub fn policy(regexes: &[Value]) -> Result<Vec<u8>> {
-    let mut parsed: toml::Value = crate::DISCLOSURE.parse()?;
+    let mut parsed: toml::Value = toml::from_str(crate::DISCLOSURE)?;
     if !regexes.is_empty() {
-        let generated: toml::Value = String::from_utf8(patterns(regexes)?)?.parse()?;
+        let generated: toml::Value = toml::from_str(&String::from_utf8(patterns(regexes)?)?)?;
         parsed["rules"]
             .as_array_mut()
             .ok_or("missing disclosure rules")?

@@ -32,7 +32,7 @@ pub fn external(engine: Option<&Value>) -> Result<Option<Vec<u8>>> {
     let p = Path::new(text(file)?);
     require(p.is_absolute())?;
     let bytes = io::read(p, MAX_FILE)?;
-    let doc: toml::Value = std::str::from_utf8(&bytes)?.parse()?;
+    let doc: toml::Value = toml::from_str(std::str::from_utf8(&bytes)?)?;
     let table = doc.as_table().ok_or("expected TOML")?;
     require(
         table
