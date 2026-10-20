@@ -30,11 +30,15 @@ checking the pinned detector source no longer imports it.
 
 A dependency update changes detector bytes. CI therefore audits and tests the
 candidate using its exact computed hash, while independently rebuilding the current
-pinned detector recipe at `02f4e9a6318208c4516dd6b274349de1275b323d`.
+published detector recipe recorded by `source` in `tests/gitleaks-pin.json`.
 Production provisioning must still match the unchanged executable hash in
-`tests/gitleaks-pin.json`. Both builds retain upstream tests, checksum verification,
+`tests/gitleaks-pin.json`. The public archive is downloaded anonymously, checked
+against its pinned hash and verified with GitHub CLI against the exact source,
+signer workflow and GitHub-hosted runner identity before provisioning. Both builds
+retain upstream tests, checksum verification,
 licenses and binary vulnerability rejection. No candidate hash replaces that pin.
 The additional test configuration is CI-only and does not add a production bypass.
-A future release must explicitly promote the verified artifact, repair the retired
-archive download route and update the production recipe/pin together. Source CI
-success does not claim the existing distribution has been updated.
+The accepted component release replaces the retired download route. Its archive,
+executable and recipe are pinned together. Future dependency candidates do not
+automatically replace the published production pin. Source CI success does not
+claim an installed scanner or a future detector component has been updated.
