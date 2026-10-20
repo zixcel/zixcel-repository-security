@@ -29,8 +29,8 @@ checking the pinned detector source no longer imports it.
 ## Candidate and production acceptance
 
 A dependency update changes detector bytes. CI therefore audits and tests the
-candidate using its exact computed hash, while independently rebuilding the last
-accepted production recipe at `02f4e9a6318208c4516dd6b274349de1275b323d`.
+candidate using its exact computed hash, while independently rebuilding the current
+pinned detector recipe at `02f4e9a6318208c4516dd6b274349de1275b323d`.
 Production provisioning must still match the unchanged executable hash in
 `tests/gitleaks-pin.json`. Both builds retain upstream tests, checksum verification,
 licenses and binary vulnerability rejection. No candidate hash replaces that pin.
