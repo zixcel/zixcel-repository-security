@@ -866,13 +866,15 @@ fn workspace_physical_selection_and_fresh_exceptions() {
 }
 #[test]
 fn provisioning_offline_and_wrong_hash() {
-    let f = Fixture::new(true);
+    let f = Fixture::new(false);
+    let configured = std::env::var("ZIXCEL_TEST_PINNED_GITLEAKS_CONFIG")
+        .or_else(|_| std::env::var("ZIXCEL_TEST_GITLEAKS_CONFIG"))
+        .expect("production provisioning requires the independently pinned engine");
+    let production = io::load(Path::new(&configured)).unwrap();
     let target = f.temp.path().join("provisioned");
     sec::maintenance::provision(
         &target,
-        Some(Path::new(
-            f.settings.config["gitleaks"]["path"].as_str().unwrap(),
-        )),
+        Some(Path::new(production["gitleaks"]["path"].as_str().unwrap())),
         None,
         false,
     )

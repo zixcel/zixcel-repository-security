@@ -25,3 +25,16 @@ upstream tests. The temporary source build continues using readonly module
 resolution, checksum verification, actual upstream tests and binary vulnerability
 checks; missing closure still rejects the candidate. Remove a root only after
 checking the pinned detector source no longer imports it.
+
+## Candidate and production acceptance
+
+A dependency update changes detector bytes. CI therefore audits and tests the
+candidate using its exact computed hash, while independently rebuilding the last
+accepted production recipe at `02f4e9a6318208c4516dd6b274349de1275b323d`.
+Production provisioning must still match the unchanged executable hash in
+`tests/gitleaks-pin.json`. Both builds retain upstream tests, checksum verification,
+licenses and binary vulnerability rejection. No candidate hash replaces that pin.
+The additional test configuration is CI-only and does not add a production bypass.
+A future release must explicitly promote the verified artifact, repair the retired
+archive download route and update the production recipe/pin together. Source CI
+success does not claim the existing distribution has been updated.

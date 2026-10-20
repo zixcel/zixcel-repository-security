@@ -29,11 +29,20 @@ jobs:
           cargo clippy --locked --all-targets -- -D warnings
       - name: Build and audit curated Gitleaks
         run: bash scripts/build-gitleaks.sh "$RUNNER_TEMP/curated-engine"
-      - name: Provision SHA-pinned curated Gitleaks
-        run: cargo run --locked -- provision-gitleaks --executable "$RUNNER_TEMP/curated-engine/gitleaks" --output-directory "$RUNNER_TEMP/zixcel-gitleaks"
-      - name: Test with actual Gitleaks and synthetic data
+      - name: Rebuild the independently pinned production detector
+        run: |
+          git init -q "$RUNNER_TEMP/published-detector-recipe"
+          git -C "$RUNNER_TEMP/published-detector-recipe" fetch -q --depth 1 https://github.com/zixcel/zixcel-repository-security.git 02f4e9a6318208c4516dd6b274349de1275b323d
+          git -C "$RUNNER_TEMP/published-detector-recipe" checkout -q --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/published-detector-recipe" rev-parse HEAD)" = 02f4e9a6318208c4516dd6b274349de1275b323d
+          bash "$RUNNER_TEMP/published-detector-recipe/scripts/build-gitleaks.sh" "$RUNNER_TEMP/production-engine"
+          cargo run --locked -- provision-gitleaks --executable "$RUNNER_TEMP/production-engine/gitleaks" --output-directory "$RUNNER_TEMP/zixcel-gitleaks-production"
+      - name: Bind audited candidate bytes to the scanner test configuration
+        run: bash scripts/candidate-engine-config.sh "$RUNNER_TEMP/curated-engine" "$RUNNER_TEMP/candidate-engine-config.json"
+      - name: Test candidate detection and pinned production provisioning
         env:
-          ZIXCEL_TEST_GITLEAKS_CONFIG: ${{ runner.temp }}/zixcel-gitleaks/config.json
+          ZIXCEL_TEST_GITLEAKS_CONFIG: ${{ runner.temp }}/candidate-engine-config.json
+          ZIXCEL_TEST_PINNED_GITLEAKS_CONFIG: ${{ runner.temp }}/zixcel-gitleaks-production/config.json
         run: cargo test --locked
       - name: Verify community policy and source distribution
         run: |
