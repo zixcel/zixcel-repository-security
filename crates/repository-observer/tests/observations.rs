@@ -1,5 +1,5 @@
 mod support;
-use serde_json::json;
+use serde_json::{Value, json};
 use support::Synthetic;
 use zixcel_repository_observer::{FetchError, model::State, observe};
 #[test]
