@@ -4,11 +4,14 @@ on:
   push:
     branches: [main]
     paths:
-      - scripts/**
-      - src/**
-      - tests/**
-      - assets/**
-      - Cargo.*
+      - scripts/gitleaks/**
+      - scripts/build-gitleaks.sh
+      - scripts/prepare-detector-go.sh
+      - scripts/gitleaks-notices.sh
+      - scripts/engine-candidate.sh
+      - scripts/verify-engine-candidate.sh
+      - scripts/candidate-engine-config.sh
+      - scripts/verify-binary-audit.sh
       - .github/workflows/detector-candidate.yml
 permissions:
   contents: read

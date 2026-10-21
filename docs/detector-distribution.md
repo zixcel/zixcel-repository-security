@@ -46,6 +46,10 @@ is implemented or implied by this policy.
 2. `Detector candidate acceptance` builds the fallback only in its dedicated job,
    audits the candidate and runs actual detection/consumer tests. It records exact
    bytes, locks, compiled imports and audit evidence after success.
+   Automatic generation watches engine recipes/locks and artifact acceptance
+   inputs only. Rust-only, rule-input or documentation changes use the pinned
+   consumer tests without rebuilding Go. Explicit dispatch can generate a
+   candidate at the exact current main when a new component release is intended.
 3. `Published detector security` audits the actual pinned binary with fresh
    vulnerability data on main changes or explicit dispatch. It does not rebuild
    an obsolete compiler recipe. An audit failure stays visible and requires a
