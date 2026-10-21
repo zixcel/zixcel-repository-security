@@ -10,7 +10,7 @@ for name in go.mod go.sum gitleaks; do
   printf '%s\n' synthetic > "$work/engine/$name"
 done
 printf '%s\n' '["synthetic"]' > "$work/engine/imports.json"
-tar -czf "$work/engine/gitleaks_8.30.1_hardened_linux_x64.tar.gz" -C "$work/engine" gitleaks
+tar -czf "$work/engine/gitleaks_8.30.1_hardened_linux_x64.tar.gz" -C "$work/engine" gitleaks imports.json
 printf '%s\n' '{}' '{"pkgSymbols":{"synthetic":["symbol"]}}' > "$work/engine/binary-inventory.jsonl"
 printf '%s\n' '{"config":{}}' > "$work/engine/vulnerabilities.jsonl"
 bash "$root/scripts/engine-candidate.sh" "$work/engine" "$work/candidate"

@@ -4,6 +4,7 @@ set -euo pipefail
 findings=$1
 inventory=$2
 imports=$3
+jq -s -e 'length>0 and any(.[]; .config|type=="object")' "$findings" >/dev/null
 jq -s -e '.[1].pkgSymbols|length > 0' "$inventory" >/dev/null
 jq -e 'type=="array" and length>0 and all(.[]; type=="string" and length>0)' "$imports" >/dev/null
 jq -s -e '[.[]|select(.finding.trace[0].package)]|length == 0' "$findings" >/dev/null

@@ -237,5 +237,8 @@ Symbols are retained for accurate binary inspection; no compiler is needed at ru
 Module-only notices remain in the build evidence. In particular, the deprecated
 OpenPGP packages in `golang.org/x/crypto` are not imported or linked by this engine;
 its used crypto packages are separately inspected. No advisory IDs are ignored.
-Standalone curated engine assets are distributed with vpremises-security releases.
+Curated engine assets are independently released by this repository; the retired
+vPremises route is not used. Normal Rust CI and installed consumers use verified
+prebuilt bytes without a Go compiler. See [artifact lifecycle](detector-distribution.md)
+for candidate acceptance, published-version auditing and immutable pin updates.
 The adapter verifies exact executable/archive hashes before provisioning.

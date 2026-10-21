@@ -75,5 +75,13 @@ Local tests use a capped transient user service; they never exhaust memory or PI
 The current adapter is for reviewed engines, not execution of untrusted binaries;
 it is not a network or privilege sandbox and does not claim to be one.
 
+For example, with a functioning delegated user systemd manager, explicitly launch
+the scanner with `systemd-run --user --wait --pipe --collect -p MemoryMax=1G
+-p MemorySwapMax=0 -p TasksMax=48 -p CPUQuota=100% -p RuntimeMaxSec=300
+-p KillMode=control-group -p LimitCORE=0 -- /absolute/path/to/scanner ...`.
+These are transient operation limits, not persistent host settings. Check guest
+and host headroom first. If delegation/enforcement is unavailable, do not claim
+hard isolation or use unbounded stress tests as a substitute.
+
 GitHub attestations establish an expected publishing identity and source. They do
 not alone prove detector correctness or absence of vulnerabilities.
