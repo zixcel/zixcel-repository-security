@@ -6,7 +6,7 @@ description = "Bounded local repository inspection with pinned Gitleaks"
 license = "Apache-2.0"
 repository = "https://github.com/zixcel/zixcel-repository-security"
 publish = false
-include = ["src/*.rs", "scripts/**", "assets/**", "examples/**", "rust-toolchain.toml", "tests/*.rs", "tests/gitleaks-pin.json", "Cargo.toml", "Cargo.lock", "README.md", "docs/**", "LICENSE*", "NOTICE", "THIRD_PARTY_NOTICES.md"]
+include = ["/src/*.rs", "/scripts/**", "/assets/**", "/examples/**", "/rust-toolchain.toml", "/tests/*.rs", "/tests/gitleaks-pin.json", "/Cargo.toml", "/Cargo.lock", "/README.md", "/docs/**", "/LICENSE*", "/NOTICE", "/THIRD_PARTY_NOTICES.md"]
 
 [dependencies]
 base64 = "0.23.1"

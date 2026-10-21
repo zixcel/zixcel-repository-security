@@ -228,7 +228,8 @@ stored, but receipt location metadata can be sensitive and must remain private.
 
 The curated engine retains Gitleaks 8.30.1 detector source and rules. Its fixed
 Go module lockfiles update compression, RAR, XZ and Go crypto/text dependencies;
-Go 1.27.2 supplies the patched standard library. `scripts/build-gitleaks.sh`
+The candidate build uses Go 1.27.3 to address the compiled crypto/x509 finding
+GO-2026-6809. This does not rewrite an existing published detector pin. `scripts/build-gitleaks.sh`
 verifies the official toolchain archive, checks Go module integrity, runs upstream
 tests and audits compiled packages/symbols with govulncheck 1.8.0 before packaging.
 Symbols are retained for accurate binary inspection; no compiler is needed at runtime.
@@ -236,5 +237,8 @@ Symbols are retained for accurate binary inspection; no compiler is needed at ru
 Module-only notices remain in the build evidence. In particular, the deprecated
 OpenPGP packages in `golang.org/x/crypto` are not imported or linked by this engine;
 its used crypto packages are separately inspected. No advisory IDs are ignored.
-Standalone curated engine assets are distributed with vpremises-security releases.
+Curated engine assets are independently released by this repository; the retired
+vPremises route is not used. Normal Rust CI and installed consumers use verified
+prebuilt bytes without a Go compiler. See [artifact lifecycle](detector-distribution.md)
+for candidate acceptance, published-version auditing and immutable pin updates.
 The adapter verifies exact executable/archive hashes before provisioning.

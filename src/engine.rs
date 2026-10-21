@@ -1,16 +1,10 @@
-use crate::{
-    MAX_FILE, Result,
-    definitions::{keys, text},
-    digest, identity, io, require,
-};
+pub use crate::engine_config::external;
+use crate::{MAX_FILE, Result, definitions::text, digest, io, require};
 use serde_json::Value;
 use std::{
-    collections::BTreeSet,
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::{Command, Stdio},
-    time::Duration,
 };
-use wait_timeout::ChildExt;
 pub struct Pass {
     pub name: &'static str,
     pub config: Vec<u8>,
@@ -22,43 +16,6 @@ pub struct Hit {
     pub file: String,
     pub rule: String,
     pub line: u64,
-}
-pub fn external(engine: Option<&Value>) -> Result<Option<Vec<u8>>> {
-    let Some(e) = engine else { return Ok(None) };
-    keys(e, &["path", "sha256", "config_file"], &["path", "sha256"])?;
-    let Some(file) = e.get("config_file") else {
-        return Ok(None);
-    };
-    let p = Path::new(text(file)?);
-    require(p.is_absolute())?;
-    let bytes = io::read(p, MAX_FILE)?;
-    let doc: toml::Value = toml::from_str(std::str::from_utf8(&bytes)?)?;
-    let table = doc.as_table().ok_or("expected TOML")?;
-    require(
-        table
-            .keys()
-            .all(|s| ["title", "extend", "rules", "allowlist", "allowlists"].contains(&s.as_str())),
-    )?;
-    if let Some(extension) = table.get("extend") {
-        require(extension.as_table().is_some_and(|t| {
-            t.keys()
-                .all(|s| ["useDefault", "disabledRules"].contains(&s.as_str()))
-        }))?;
-    }
-    let rules = doc
-        .get("rules")
-        .and_then(|v| v.as_array())
-        .ok_or("explicit rules required")?;
-    require((1..=256).contains(&rules.len()))?;
-    let mut ids = BTreeSet::new();
-    for rule in rules {
-        let id = rule
-            .get("id")
-            .and_then(|v| v.as_str())
-            .ok_or("expected rule id")?;
-        require(identity(id, false) && ids.insert(id))?;
-    }
-    Ok(Some(bytes))
 }
 fn verify(e: &Value) -> Result<PathBuf> {
     let path = PathBuf::from(text(&e["path"])?);
@@ -86,7 +43,8 @@ pub fn run(e: &Value, passes: Vec<Pass>) -> Result<Vec<Hit>> {
         if report.exists() {
             std::fs::remove_file(&report)?;
         }
-        let mut child = Command::new(&exe)
+        let mut command = Command::new(&exe);
+        command
             .arg("dir")
             .arg(&pass.target)
             .args([
@@ -104,19 +62,13 @@ pub fn run(e: &Value, passes: Vec<Pass>) -> Result<Vec<Hit>> {
             .env("PATH", "/usr/bin:/bin")
             .env("HOME", temp.path())
             .env("GOMAXPROCS", "1")
+            // Go's memory target is advisory; OS containment belongs to the launcher.
+            .env("GOMEMLIMIT", "384MiB")
             .current_dir(&pass.target)
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()?;
-        let status = match child.wait_timeout(Duration::from_secs(120))? {
-            Some(s) => s,
-            None => {
-                child.kill()?;
-                child.wait()?;
-                return Err("engine timed out".into());
-            }
-        };
+            .stderr(Stdio::null());
+        let status = crate::engine_process::run(&mut command, &report)?;
         require(matches!(status.code(), Some(0 | 1)))?;
         let data: Value = serde_json::from_slice(&io::read(&report, MAX_FILE)?)?;
         let list = data.as_array().ok_or("expected report array")?;

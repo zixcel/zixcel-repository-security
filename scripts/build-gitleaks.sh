@@ -8,10 +8,7 @@ output=$1
 recipe=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 work=$(mktemp -d "$RUNNER_TEMP/zixcel-engine.XXXXXX")
 trap 'chmod -R u+w -- "$work"; rm -rf -- "$work"' EXIT
-curl --disable --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --max-time 120 \
-    https://go.dev/dl/go1.27.2.linux-amd64.tar.gz -o "$work/go.tgz"
-printf '%s  %s\n' ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045fe5 "$work/go.tgz" | sha256sum -c --strict
-tar -xzf "$work/go.tgz" -C "$work"
+bash "$recipe/prepare-detector-go.sh" "$work"
 source="$work/source"
 git init -q "$source"
 git -C "$source" fetch -q --depth 1 https://github.com/gitleaks/gitleaks.git 83d9cd684c87d95d656c1458ef04895a7f1cbd8e
@@ -68,9 +65,17 @@ cp "$source/go.mod" "$source/go.sum" "$output/"
 # module-only notices can describe unused packages and remain in the audit evidence.
 GOBIN="$work/bin" "$work/go/bin/go" install golang.org/x/vuln/cmd/govulncheck@v1.8.0
 "$work/bin/govulncheck" -mode=extract "$output/gitleaks" > "$output/binary-inventory.jsonl"
-jq -s -e '.[1].pkgSymbols|length > 0' "$output/binary-inventory.jsonl" > /dev/null
+if ! jq -s -e '.[1].pkgSymbols|length > 0' "$output/binary-inventory.jsonl" > /dev/null; then
+    echo '::error::Binary extraction did not provide package symbols; refusing module-only audit.' >&2
+    jq -s '{header: .[0], bodyKeys: (.[1] | keys), symbolCount: (.[1].pkgSymbols | length)}' "$output/binary-inventory.jsonl" >&2
+    exit 1
+fi
 "$work/bin/govulncheck" -mode=binary -json "$output/gitleaks" > "$output/vulnerabilities.jsonl"
-jq -s -e '[.[]|select(.finding.trace[0].package)]|length == 0' "$output/vulnerabilities.jsonl" > /dev/null
+if ! jq -s -e '[.[]|select(.finding.trace[0].package)]|length == 0' "$output/vulnerabilities.jsonl" > /dev/null; then
+    echo '::error::Compiled vulnerable packages remain in the candidate binary.' >&2
+    jq -c 'select(.finding.trace[0].package) | .finding | {osv, trace}' "$output/vulnerabilities.jsonl" >&2
+    exit 1
+fi
 # Accept module-only notices only when every affected package is proven absent.
 # Missing/unknown package definitions fail closed; no advisory-specific allowlist.
 jq -s -e --slurpfile imports "$output/imports.json" '
@@ -83,6 +88,6 @@ jq -s -e --slurpfile imports "$output/imports.json" '
         ($affected|length) > 0 and all($affected[];
             . as $package | (contains("*")|not) and ($imports[0]|index($package)) == null))
     ' "$output/vulnerabilities.jsonl" > /dev/null
-tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$output" -cf - Go-runtime-LICENSE LICENSE gitleaks licenses | \
+tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$output" -cf - Go-runtime-LICENSE LICENSE gitleaks licenses imports.json | \
     gzip -n > "$output/gitleaks_8.30.1_hardened_linux_x64.tar.gz"
 printf '%s\n' 'Hardened engine: upstream tests, module integrity and binary vulnerability checks passed.'

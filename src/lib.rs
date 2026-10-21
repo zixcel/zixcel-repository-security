@@ -5,6 +5,8 @@ pub mod config;
 pub mod definitions;
 pub mod directory;
 pub mod engine;
+mod engine_config;
+mod engine_process;
 pub mod io;
 pub mod maintenance;
 pub mod scanner;

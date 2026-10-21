@@ -6,10 +6,11 @@ work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 export GITHUB_SHA=1111111111111111111111111111111111111111
 mkdir "$work/engine"
-for name in go.mod go.sum imports.json gitleaks; do
+for name in go.mod go.sum gitleaks; do
   printf '%s\n' synthetic > "$work/engine/$name"
 done
-tar -czf "$work/engine/gitleaks_8.30.1_hardened_linux_x64.tar.gz" -C "$work/engine" gitleaks
+printf '%s\n' '["synthetic"]' > "$work/engine/imports.json"
+tar -czf "$work/engine/gitleaks_8.30.1_hardened_linux_x64.tar.gz" -C "$work/engine" gitleaks imports.json
 printf '%s\n' '{}' '{"pkgSymbols":{"synthetic":["symbol"]}}' > "$work/engine/binary-inventory.jsonl"
 printf '%s\n' '{"config":{}}' > "$work/engine/vulnerabilities.jsonl"
 bash "$root/scripts/engine-candidate.sh" "$work/engine" "$work/candidate"
@@ -33,5 +34,8 @@ reject "$GITHUB_SHA"
 jq '.repository="other/owner"' "$work/original.json" > "$work/candidate/candidate.json"
 reject "$GITHUB_SHA"
 cp "$work/original.json" "$work/candidate/candidate.json"
+printf '%s\n' 'unexpected' > "$work/candidate/unreviewed.txt"
+reject "$GITHUB_SHA"
+rm "$work/candidate/unreviewed.txt"
 bash "$root/scripts/verify-engine-candidate.sh" "$work/candidate" "$GITHUB_SHA"
 printf '%s\n' 'Candidate source, content, symlink, member and repository boundaries passed.'

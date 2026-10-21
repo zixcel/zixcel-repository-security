@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       candidate-run:
-        description: Successful main CI run containing reviewed detector artifact
+        description: Successful main detector-candidate run containing reviewed artifact
         required: true
         type: string
       archive-sha256:
@@ -38,7 +38,7 @@ jobs:
           set -euo pipefail
           [[ "$CANDIDATE_RUN" =~ ^[0-9]+$ && "$ARCHIVE_SHA" =~ ^[a-f0-9]{64}$ ]]
           gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CANDIDATE_RUN" > "$RUNNER_TEMP/run.json"
-          jq -e --arg sha "$GITHUB_SHA" '.head_sha==$sha and .head_branch=="main" and .event=="push" and .conclusion=="success" and .path==".github/workflows/ci.yml" and .head_repository.full_name=="zixcel/zixcel-repository-security"' "$RUNNER_TEMP/run.json"
+          bash scripts/verify-candidate-run.sh "$RUNNER_TEMP/run.json" "$GITHUB_SHA"
           for workflow in ci.yml oss-policy.yml dependency-policy-tests.yml; do
             gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$workflow/runs?head_sha=$GITHUB_SHA&per_page=100" |
               jq -e --arg sha "$GITHUB_SHA" '[.workflow_runs[] | select(.head_sha==$sha and .head_branch=="main" and .event=="push")]|sort_by(.run_number)|last|.conclusion=="success"'
@@ -47,7 +47,8 @@ jobs:
           gh run download "$CANDIDATE_RUN" --repo "$GITHUB_REPOSITORY" --name "detector-$GITHUB_SHA-$attempt" --dir "$RUNNER_TEMP/candidate"
           bash scripts/verify-engine-candidate.sh "$RUNNER_TEMP/candidate" "$GITHUB_SHA"
           test "$(jq -r '.files["gitleaks_8.30.1_hardened_linux_x64.tar.gz"]' "$RUNNER_TEMP/candidate/candidate.json")" = "$ARCHIVE_SHA"
-          gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/gitleaks/v8.30.1-r1" |
+          tag=$(jq -er .tag scripts/gitleaks/component.json)
+          gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" |
             jq -e --arg sha "$GITHUB_SHA" '.object.type=="commit" and .object.sha==$sha'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         id: upload
@@ -82,13 +83,14 @@ jobs:
           cd "$RUNNER_TEMP/candidate"
           archive=gitleaks_8.30.1_hardened_linux_x64.tar.gz
           test "$(sha256sum "$archive" | cut -d ' ' -f 1)" = "$ARCHIVE_SHA"
-          tag=gitleaks/v8.30.1-r1
+          tag=$(jq -er .releaseTag candidate.json)
+          [[ "$tag" =~ ^gitleaks/v[0-9]+\.[0-9]+\.[0-9]+-r[0-9]+$ ]]
           if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" > "$RUNNER_TEMP/release.json" 2> "$RUNNER_TEMP/release-error"; then
             jq -e --arg sha "$GITHUB_SHA" '.target_commitish==$sha and .draft==false and .prerelease==false' "$RUNNER_TEMP/release.json"
           else
             grep -q '(HTTP 404)' "$RUNNER_TEMP/release-error"
             test "$GITHUB_RUN_ATTEMPT" = 1
-            gh release create "$tag" ./* --repo "$GITHUB_REPOSITORY" --verify-tag --target "$GITHUB_SHA" --title 'Hardened Gitleaks 8.30.1 revision 1' --notes "Detector component only; Linux amd64. Source $GITHUB_SHA; archive SHA256 $ARCHIVE_SHA. Existing production pin is updated through a separate reviewed PR."
+            gh release create "$tag" ./* --repo "$GITHUB_REPOSITORY" --verify-tag --target "$GITHUB_SHA" --title "Reviewed detector $tag" --notes "Detector component only; Linux amd64. Source $GITHUB_SHA; archive SHA256 $ARCHIVE_SHA. Existing production pin is updated through a separate reviewed PR."
           fi
           gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern "$archive" --dir "$RUNNER_TEMP/readback"
           test "$(sha256sum "$RUNNER_TEMP/readback/$archive" | cut -d ' ' -f 1)" = "$ARCHIVE_SHA"
