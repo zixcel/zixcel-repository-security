@@ -59,3 +59,38 @@ jobs:
             ${{ runner.temp }}/observer-dist/SHA256SUMS
           if-no-files-found: error
           retention-days: 7
+  publish:
+    if: github.repository == 'zixcel/zixcel-repository-security' && startsWith(github.ref, 'refs/tags/observer/v')
+    needs: verify
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    environment: observer-public
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          artifact-ids: ${{ needs.verify.outputs.artifact }}
+          merge-multiple: true
+          path: ${{ runner.temp }}/observer-dist
+      - name: Publish the exact tested archive once and verify readback
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ needs.verify.outputs.sha256 }}
+          ARCHIVE: ${{ needs.verify.outputs.filename }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$GITHUB_REF_NAME" =~ ^observer/v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          cd "$RUNNER_TEMP/observer-dist"
+          test "$(cat SHA256SUMS)" = "$EXPECTED_SHA  $ARCHIVE"
+          test "$(sha256sum "$ARCHIVE" | cut -d ' ' -f1)" = "$EXPECTED_SHA"
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" > "$RUNNER_TEMP/existing-release.json" 2> "$RUNNER_TEMP/release-error"; then
+            jq -e --arg sha "$GITHUB_SHA" '.target_commitish==$sha and .draft==false and .prerelease==false' "$RUNNER_TEMP/existing-release.json"
+          else
+            grep -q '(HTTP 404)' "$RUNNER_TEMP/release-error"
+            test "$GITHUB_RUN_ATTEMPT" = 1
+            gh release create "$GITHUB_REF_NAME" "$ARCHIVE" SHA256SUMS --repo "$GITHUB_REPOSITORY" --latest=false --verify-tag --target "$GITHUB_SHA" --title "Repository observer $GITHUB_REF_NAME" --notes "Read-only GitHub configuration observer; Linux/WSL GNU binary. Source $GITHUB_SHA; archive SHA256 $EXPECTED_SHA. Settings changes and credential enrollment are not implemented."
+          fi
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern "$ARCHIVE" --dir "$RUNNER_TEMP/readback"
+          test "$(sha256sum "$RUNNER_TEMP/readback/$ARCHIVE" | cut -d ' ' -f1)" = "$EXPECTED_SHA"
