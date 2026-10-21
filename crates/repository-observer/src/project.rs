@@ -58,6 +58,13 @@ pub(crate) fn defaults(value: &Value) -> Result<Value> {
     )
 }
 pub(crate) fn environment(value: &Value) -> Result<Value> {
+    if value["id"].as_u64().is_none_or(|id| id == 0)
+        || value["name"]
+            .as_str()
+            .is_none_or(|name| name.is_empty() || name.len() > 255)
+    {
+        return Err("environment_identity_schema");
+    }
     let reviewers = value["protection_rules"]
         .as_array()
         .ok_or("environment_schema")?;

@@ -47,14 +47,19 @@ pub fn observe(
     );
     for rule in rules.data.as_array().into_iter().flatten().take(8) {
         if let Some(id) = rule["id"].as_u64() {
-            observations.insert(
-                format!("ruleset:{id}"),
-                one(
-                    reader,
-                    &format!("{base}/rulesets/{id}?includes_parents=true"),
-                    rule_detail,
-                ),
+            let mut detail = one(
+                reader,
+                &format!("{base}/rulesets/{id}?includes_parents=true"),
+                rule_detail,
             );
+            if detail.state == crate::model::State::Supported
+                && ["id", "source", "source_type", "target"]
+                    .iter()
+                    .any(|key| detail.data[*key] != rule[*key])
+            {
+                detail = Observation::missing("ruleset_identity_changed");
+            }
+            observations.insert(format!("ruleset:{id}"), detail);
         }
     }
     let mut rules = rules;

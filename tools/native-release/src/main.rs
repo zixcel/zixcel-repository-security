@@ -52,9 +52,14 @@ fn run() -> Result<(), &'static str> {
     {
         return Err("binary_identity");
     }
-    for file in ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"] {
+    for file in ["LICENSE", "LICENSE-MIT"] {
         fs::copy(file, directory.join(file)).map_err(|_| "owner_notice")?;
     }
+    fs::copy(
+        "crates/repository-observer/NOTICE",
+        directory.join("NOTICE"),
+    )
+    .map_err(|_| "owner_notice")?;
     fs::copy("docs/repository-observer.md", directory.join("README.md"))
         .map_err(|_| "documentation")?;
     licenses::collect(&directory)?;
