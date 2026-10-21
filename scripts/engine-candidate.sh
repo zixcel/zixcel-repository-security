@@ -22,7 +22,9 @@ for file in "${files[@]}"; do
   hashes=$(jq -cn --argjson files "$hashes" --arg file "$file" --arg sha "$sha" '$files+{($file):$sha}')
 done
 executable_sha=$(sha256sum "$engine/gitleaks" | cut -d ' ' -f 1)
-jq -n --arg source "$source_sha" --arg executable "$executable_sha" --argjson files "$hashes" \
+component=$(cat "$(dirname "$0")/gitleaks/component.json")
+jq -n --arg source "$source_sha" --arg executable "$executable_sha" --argjson files "$hashes" --argjson component "$component" \
   '{schema:1,repository:"zixcel/zixcel-repository-security",source:$source,
-    detectorVersion:"8.30.1",platform:"linux-amd64",executableSha256:$executable,files:$files}' > "$output/candidate.json"
+    detectorVersion:$component.version,platform:$component.platform,releaseTag:$component.tag,
+    origin:$component.origin,build:$component.build,executableSha256:$executable,files:$files}' > "$output/candidate.json"
 bash "$(dirname "$0")/verify-engine-candidate.sh" "$output" "$source_sha"

@@ -1,31 +1,79 @@
-# Reviewed detector distribution
+# Detector ownership and artifact lifecycle
 
-The repository owns its curated Gitleaks build and its dependency licenses.
-The retired vPremises archive URL is not a working distribution route.
-The production pin now selects the published component archive and its exact
-source recipe. Anonymous archive bytes and signature provenance must be accepted
-before production provisioning succeeds. Source CI alone does not repair a URL.
+## Responsibilities
 
-Successful owner CI records the tested detector archive, executable digest,
-source identity, exact Go module locks, compiled imports and vulnerability evidence
-as a source-bound artifact. CI still runs actual upstream tests, license retention,
-compiled-binary vulnerability rejection, scanner regressions and current production
-pin provisioning. Synthetic packaging tests do not replace these real checks.
+Rust owns source enumeration, input/expansion budgets, private policy dictionaries,
+exceptions, redaction, stable receipts and the final passed/findings/incomplete
+decision. It does not reimplement a secret-detection database or upload source or
+credentials to an engine service. The Gitleaks adapter translates local inputs and
+redacted reports; the child owns detection only. There is no general plugin host.
 
-After source acceptance, review the actual main CI artifact and its archive hash.
-Only an explicitly approved candidate may receive the component tag
-`gitleaks/v8.30.1-r1`. Then dispatch `Publish reviewed detector` on the same main
-source with that CI run ID and exact archive hash. It checks successful main CI,
-OSS policy, dependency-policy validation and the source-bound tag. The write job
-publishes those same bytes without rebuilding, adds build provenance and verifies
-the downloaded archive. Existing assets are never replaced; failed attempts must
-be inspected before any retry. No cloud credential, external App or central
-execution repository is needed.
+The artifact lifecycle owns intake, integrity, origin, licenses, binary security
+acceptance, synthetic detection regressions and immutable distribution. A Rust
+source change is not itself an engine update. `tests/gitleaks-pin.json` records the
+consumer's exact URL, source, archive/executable hashes and build identity.
 
-This releases the detector component, not a new Rust scanner package. Production
-CI binds the canonical URL, archive/executable hashes and published recipe together.
-It freshly rebuilds/audits that recipe and independently verifies and provisions
-the actual published archive before running scanner regressions. The old recipe
-is no longer a fallback. Future pin changes require the same source review and
-independent consumer acceptance. GitHub provenance identifies the trusted
-publishing workflow and source; it does not independently prove every test claim.
+## Prebuilt first, reviewed rebuild when necessary
+
+Prefer official prebuilt binaries that satisfy the same acceptance contract.
+An upstream version number or checksum alone is insufficient: verify authenticated
+origin/source identity, supported platform, retained licenses/notices, actual
+binary vulnerability coverage, report compatibility and positive/negative fixtures.
+Missing evidence means not accepted. Never select `latest` at scan time.
+
+The current accepted distribution uses an owner rebuild because the existing
+8.30.1 recipe required patched runtime/dependency versions and retained binary
+symbols for precise auditing. This fallback does not fork detector behavior.
+`scripts/build-gitleaks.sh` pins upstream source, verifies module integrity, runs
+the real upstream suite, retains licenses and audits compiled code. Its Go tooling
+exists only in operation-scoped CI storage and is not a runtime prerequisite.
+Moving to an upstream artifact is a normal tested manifest/adapter change, not a
+reason to remove vulnerability or license checks. No automatic upstream adoption
+is implemented or implied by this policy.
+
+## Independent pipelines
+
+1. `CI/test` consumes the immutable published archive, verifies its hash and GitHub
+   provenance, and tests the Rust consumer. It neither builds Go nor silently
+   updates the pin. Integrity/compatibility failures still reject source changes.
+2. `Detector candidate acceptance` builds the fallback only in its dedicated job,
+   audits the candidate and runs actual detection/consumer tests. It records exact
+   bytes, locks, compiled imports and audit evidence after success.
+3. `Published detector security` audits the actual pinned binary with fresh
+   vulnerability data on main changes or explicit dispatch. It does not rebuild
+   an obsolete compiler recipe. An audit failure stays visible and requires a
+   replacement; it is not a pass or advisory suppression. There is no new schedule.
+4. `Publish reviewed detector` accepts only a successful exact-main candidate run,
+   successful main CI and owner policies, and the source-bound component tag.
+   It publishes the tested bytes once, attests them and verifies anonymous readback.
+   Published-version alarms cannot make a validated replacement unpublishable.
+
+`scripts/gitleaks/component.json` identifies the next immutable revision. Dispatch
+the candidate on accepted main, inspect its actual archive hash, create its tag at
+that exact source, then dispatch publication with the candidate run and hash.
+Never reuse a tag, replace assets, or blindly replay a failed publication.
+The separate consumer-pin PR must verify published bytes, provenance and all real
+consumer tests. The published-security check must succeed for the new pin before
+the recovery issue closes. Do not roll back to a known-vulnerable artifact.
+
+## Process safety and remaining platform boundary
+
+The detector receives a bounded private staging tree, sanitized environment, no
+stdin and redacted-report flags. Rust verifies the executable before/after use,
+limits execution to 120 seconds, watches report growth and Linux resident memory,
+and kills/reaps its owned child on errors or unwinding. Reports are no-follow reads
+with size/metadata checks. Unexpected exits, malformed reports, timeouts and limits
+fail the operation; they cannot produce a passed receipt.
+
+`GOMAXPROCS=1` and `GOMEMLIMIT=384MiB` constrain normal behavior. The 512MiB sampled
+RSS threshold and 25ms polling are observations, not hard memory/disk isolation.
+They cannot prevent allocation spikes or contain a compromised executable spawning
+descendants. On constrained hosts, run the entire scanner in an owner-controlled
+cgroup/container with hard memory, swap, task and CPU limits and group cleanup.
+Do not use Go virtual-address-space limits as a substitute for a memory cgroup.
+Local tests use a capped transient user service; they never exhaust memory or PIDs.
+The current adapter is for reviewed engines, not execution of untrusted binaries;
+it is not a network or privilege sandbox and does not claim to be one.
+
+GitHub attestations establish an expected publishing identity and source. They do
+not alone prove detector correctness or absence of vulnerabilities.

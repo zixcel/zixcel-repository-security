@@ -28,15 +28,16 @@ checking the pinned detector source no longer imports it.
 
 ## Candidate and production acceptance
 
-A dependency update changes detector bytes. CI therefore audits and tests the
-candidate using its exact computed hash, while independently rebuilding the current
-published detector recipe recorded by `source` in `tests/gitleaks-pin.json`.
+A dependency update changes detector bytes. The dedicated candidate workflow
+audits and tests its exact computed hash. Ordinary Rust CI consumes the existing
+published archive without a Go compiler. A separate published-security workflow
+audits the actual pinned binary without rebuilding its obsolete source recipe.
 Production provisioning must still match the unchanged executable hash in
 `tests/gitleaks-pin.json`. The public archive is downloaded anonymously, checked
 against its pinned hash and verified with GitHub CLI against the exact source,
-signer workflow and GitHub-hosted runner identity before provisioning. Both builds
-retain upstream tests, checksum verification,
-licenses and binary vulnerability rejection. No candidate hash replaces that pin.
+signer workflow and GitHub-hosted runner identity before provisioning. Candidate
+builds retain upstream tests, checksum verification, licenses and binary
+vulnerability rejection. No candidate hash automatically replaces that pin.
 The additional test configuration is CI-only and does not add a production bypass.
 The accepted component release replaces the retired download route. Its archive,
 executable and recipe are pinned together. Future dependency candidates do not

@@ -8,10 +8,7 @@ output=$1
 recipe=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 work=$(mktemp -d "$RUNNER_TEMP/zixcel-engine.XXXXXX")
 trap 'chmod -R u+w -- "$work"; rm -rf -- "$work"' EXIT
-curl --disable --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --max-time 120 \
-    https://go.dev/dl/go1.27.3.linux-amd64.tar.gz -o "$work/go.tgz"
-printf '%s  %s\n' 65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40 "$work/go.tgz" | sha256sum -c --strict
-tar -xzf "$work/go.tgz" -C "$work"
+bash "$recipe/prepare-detector-go.sh" "$work"
 source="$work/source"
 git init -q "$source"
 git -C "$source" fetch -q --depth 1 https://github.com/gitleaks/gitleaks.git 83d9cd684c87d95d656c1458ef04895a7f1cbd8e
@@ -91,6 +88,6 @@ jq -s -e --slurpfile imports "$output/imports.json" '
         ($affected|length) > 0 and all($affected[];
             . as $package | (contains("*")|not) and ($imports[0]|index($package)) == null))
     ' "$output/vulnerabilities.jsonl" > /dev/null
-tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$output" -cf - Go-runtime-LICENSE LICENSE gitleaks licenses | \
+tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner -C "$output" -cf - Go-runtime-LICENSE LICENSE gitleaks licenses imports.json | \
     gzip -n > "$output/gitleaks_8.30.1_hardened_linux_x64.tar.gz"
 printf '%s\n' 'Hardened engine: upstream tests, module integrity and binary vulnerability checks passed.'
