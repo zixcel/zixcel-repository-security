@@ -3,6 +3,7 @@ updates:
 - package-ecosystem: cargo
   directories:
   - /
+  - /tools/native-release
   schedule:
     interval: daily
     time: '05:00'

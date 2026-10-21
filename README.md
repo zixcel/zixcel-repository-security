@@ -40,3 +40,7 @@ and registry installation have not been verified.
 [OSS responsibility and source completion](docs/oss-source-contract.md) defines the supported package boundary and required acceptance. It does not declare unexecuted source, distribution or production checks complete.
 
 Dependency updates: [repository policy](docs/dependency-updates.md).
+
+## Repository configuration observations
+
+The independent [read-only observer](docs/repository-observer.md) inspects GitHub configuration with explicit denial/partial states and fresh-state review. It does not replace secret scanning or change repository settings.
