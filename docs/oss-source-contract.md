@@ -29,6 +29,13 @@ Manifest versions and publish flags are declarations, not proof of published ava
 
 - [.github/workflows/ci.yml](../.github/workflows/ci.yml)
 - [.github/workflows/oss-policy.yml](../.github/workflows/oss-policy.yml)
+- [Detector candidate acceptance](../.github/workflows/detector-candidate.yml)
+- [Published detector security](../.github/workflows/published-detector-security.yml)
+- [Immutable detector publication](../.github/workflows/publish-detector.yml)
+
+Normal Rust CI consumes verified prebuilt detector artifacts; engine generation,
+published-version security alarms and publication are independent owner duties.
+See [detector lifecycle](detector-distribution.md) for their acceptance boundaries.
 
 Use the package scripts/owner CI above and the repository README for exact commands. When schema files exist, their canonical validator and consumer must be checked together; deleting a definition on a text search alone is insufficient.
 

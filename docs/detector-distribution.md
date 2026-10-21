@@ -21,6 +21,13 @@ origin/source identity, supported platform, retained licenses/notices, actual
 binary vulnerability coverage, report compatibility and positive/negative fixtures.
 Missing evidence means not accepted. Never select `latest` at scan time.
 
+Archive provisioning retains root/dependency licenses and a copy of the exact
+engine manifest next to the executable. It validates the complete gzip stream,
+rejects duplicate/unsafe members and writes the usable configuration last.
+`--executable` only accepts already-managed pinned bytes; its caller remains
+responsible for retaining the corresponding license bundle. Full development
+tests also require `ZIXCEL_TEST_PINNED_GITLEAKS_ARCHIVE` pointing to the exact pin.
+
 The current accepted distribution uses an owner rebuild because the existing
 8.30.1 recipe required patched runtime/dependency versions and retained binary
 symbols for precise auditing. This fallback does not fork detector behavior.

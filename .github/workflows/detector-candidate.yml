@@ -43,6 +43,7 @@ jobs:
           CARGO_TARGET_DIR: ${{ runner.temp }}/candidate-target
           ZIXCEL_TEST_GITLEAKS_CONFIG: ${{ runner.temp }}/candidate-config.json
           ZIXCEL_TEST_PINNED_GITLEAKS_CONFIG: ${{ runner.temp }}/production/config.json
+          ZIXCEL_TEST_PINNED_GITLEAKS_ARCHIVE: ${{ runner.temp }}/published/engine.tar.gz
         run: cargo test --locked -- --test-threads=1
       - name: Record the tested bytes for independent publication
         run: bash scripts/engine-candidate.sh "$RUNNER_TEMP/curated-engine" "$RUNNER_TEMP/engine-candidate"

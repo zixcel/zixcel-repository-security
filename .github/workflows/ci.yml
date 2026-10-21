@@ -46,6 +46,7 @@ jobs:
         env:
           ZIXCEL_TEST_GITLEAKS_CONFIG: ${{ runner.temp }}/zixcel-gitleaks-production/config.json
           ZIXCEL_TEST_PINNED_GITLEAKS_CONFIG: ${{ runner.temp }}/zixcel-gitleaks-production/config.json
+          ZIXCEL_TEST_PINNED_GITLEAKS_ARCHIVE: ${{ runner.temp }}/published-detector/engine.tar.gz
         run: cargo test --locked -- --test-threads=1
       - name: Verify community policy and source distribution
         run: |
