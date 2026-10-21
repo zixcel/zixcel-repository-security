@@ -1,3 +1,4 @@
+pub use crate::git_inventory::{Files, files as git_files};
 use crate::{
     DISCLOSURE, MAX_FILE, MAX_FILES, MAX_TOTAL, Result,
     config::Settings,
@@ -11,119 +12,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     io::{Cursor, Read},
     path::Path,
-    process::{Command, Stdio},
-    time::Duration,
 };
-use wait_timeout::ChildExt;
-#[derive(PartialEq, Debug)]
-pub struct Files {
-    pub names: Vec<String>,
-    pub ignored: BTreeSet<String>,
-    pub deleted: Vec<String>,
-    pub directories: Vec<String>,
-}
-fn git_output(
-    root: &Path,
-    git: &[String],
-    args: &[&str],
-    input: Option<&[u8]>,
-    allow_one: bool,
-) -> Result<Vec<u8>> {
-    let temp = tempfile::tempdir()?;
-    let out = temp.path().join("out");
-    let inp = temp.path().join("in");
-    io::private_bytes(&out, b"")?;
-    io::private_bytes(&inp, input.unwrap_or(b""))?;
-    let mut child = Command::new("git")
-        .args(git)
-        .args(args)
-        .current_dir(root)
-        .env_remove("GIT_DIR")
-        .env_remove("GIT_WORK_TREE")
-        .env_remove("GIT_INDEX_FILE")
-        .stdin(Stdio::from(std::fs::File::open(inp)?))
-        .stdout(Stdio::from(
-            std::fs::OpenOptions::new().write(true).open(&out)?,
-        ))
-        .stderr(Stdio::null())
-        .spawn()?;
-    let status = match child.wait_timeout(Duration::from_secs(120))? {
-        Some(s) => s,
-        None => {
-            child.kill()?;
-            child.wait()?;
-            return Err("git observation timed out".into());
-        }
-    };
-    require(status.success() || (allow_one && status.code() == Some(1)))?;
-    io::read(&out, MAX_TOTAL)
-}
-fn split_names(bytes: &[u8]) -> Result<BTreeSet<String>> {
-    bytes
-        .split(|b| *b == 0)
-        .filter(|s| !s.is_empty())
-        .map(|s| Ok(std::str::from_utf8(s)?.to_owned()))
-        .collect()
-}
-pub fn git_files(root: &Path) -> Result<Files> {
-    let temp = tempfile::tempdir()?;
-    let mut git = vec!["-c".into(), "core.excludesFile=/dev/null".into()];
-    if !root.join(".git").exists() {
-        git_output(
-            root,
-            &[],
-            &["init", "-q", temp.path().to_str().ok_or("invalid path")?],
-            None,
-            false,
-        )?;
-        git.extend([
-            format!("--git-dir={}/.git", temp.path().display()),
-            format!("--work-tree={}", root.display()),
-        ]);
-    }
-    let mut names = split_names(&git_output(
-        root,
-        &git,
-        &["ls-files", "-c", "-o", "--exclude-standard", "-z"],
-        None,
-        false,
-    )?)?;
-    let deleted = split_names(&git_output(
-        root,
-        &git,
-        &["ls-files", "--deleted", "-z"],
-        None,
-        false,
-    )?)?
-    .into_iter()
-    .filter(|name| std::fs::symlink_metadata(root.join(name)).is_err())
-    .collect::<Vec<_>>();
-    for name in &deleted {
-        names.remove(name);
-    }
-    require(names.len() <= MAX_FILES)?;
-    let ignored = if names.is_empty() {
-        BTreeSet::new()
-    } else {
-        let input = names
-            .iter()
-            .flat_map(|n| n.bytes().chain([0]))
-            .collect::<Vec<_>>();
-        split_names(&git_output(
-            root,
-            &git,
-            &["check-ignore", "--no-index", "--stdin", "-z"],
-            Some(&input),
-            true,
-        )?)?
-    };
-    Ok(Files {
-        names: names.into_iter().collect(),
-        ignored,
-        deleted,
-        directories: Vec::new(),
-    })
-}
 pub struct Budget {
     pub bytes: usize,
     pub entries: usize,

@@ -2,7 +2,7 @@
 pub use crate::engine_install::{PIN, provision};
 use crate::{MAX_FILE, Result, io, require, scanner};
 use serde_json::json;
-use std::{path::Path, process::Command};
+use std::path::Path;
 pub fn oss(root: &Path) -> Result<()> {
     let root = io::physical_root(root)?;
     for name in [
@@ -21,13 +21,7 @@ pub fn oss(root: &Path) -> Result<()> {
         .cloned()
         .unwrap_or_default();
     // ls-files includes deleted tracked entries; generated artifacts must never be tracked.
-    let output = Command::new("git")
-        .args(["ls-files", "-z"])
-        .current_dir(&root)
-        .output()?;
-    require(output.status.success() && output.stdout.len() <= crate::MAX_TOTAL)?;
-    for name in output.stdout.split(|b| *b == 0).filter(|s| !s.is_empty()) {
-        let name = std::str::from_utf8(name)?;
+    for name in crate::git_inventory::tracked(&root)? {
         let parts = name.split('/').collect::<Vec<_>>();
         let first = parts[0];
         let forbidden = [
