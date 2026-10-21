@@ -6,6 +6,9 @@ use std::{
     path::{Component, Path},
 };
 use zixcel_repository_observer::Result;
+#[cfg(test)]
+#[path = "input_tests.rs"]
+mod tests;
 pub fn read<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T> {
     if !path.is_absolute() {
         return Err("absolute_input_required");

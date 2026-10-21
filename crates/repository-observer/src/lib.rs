@@ -15,10 +15,22 @@ pub use transport::{FetchError, Github, Read};
 pub type Result<T> = std::result::Result<T, &'static str>;
 pub fn digest(value: &impl serde::Serialize) -> String {
     use sha2::{Digest, Sha256};
-    format!(
-        "{:x}",
-        Sha256::digest(serde_json::to_vec(value).expect("JSON model"))
-    )
+    fn ordered(value: &mut serde_json::Value) {
+        match value {
+            serde_json::Value::Object(fields) => {
+                fields.values_mut().for_each(ordered);
+                fields.sort_keys();
+            }
+            serde_json::Value::Array(values) => values.iter_mut().for_each(ordered),
+            _ => {}
+        }
+    }
+    let mut value = serde_json::to_value(value).expect("JSON model");
+    ordered(&mut value);
+    Sha256::digest(serde_json::to_vec(&value).expect("JSON model"))
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 pub fn repository(input: &str) -> Result<()> {
     let parts: Vec<_> = input.split('/').collect();

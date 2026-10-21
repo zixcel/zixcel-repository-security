@@ -29,6 +29,7 @@ jobs:
           cargo +1.97.1 fmt --all -- --check
           cargo +1.97.1 clippy --locked -p zixcel-repository-observer --all-targets -- -D warnings
           cargo +1.97.1 test --locked -p zixcel-repository-observer -- --test-threads=1
+          cargo +1.97.1 test --locked -p zixcel-repository-observer --features serde_json/preserve_order -- --test-threads=1
           cargo +1.97.1 build --locked --release -p zixcel-repository-observer
       - name: Audit the resolved observer and build tool graphs
         run: |

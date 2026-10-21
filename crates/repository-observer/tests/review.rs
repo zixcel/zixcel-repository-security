@@ -2,6 +2,14 @@ mod support;
 use serde_json::json;
 use support::Synthetic;
 use zixcel_repository_observer::{Change, Proposal, digest, model::State, observe, review};
+#[test]
+fn component_hash_is_independent_of_json_object_insertion_order() {
+    let a: serde_json::Value =
+        serde_json::from_str(r#"{"b":{"z":1,"a":2},"a":[{"b":3,"a":4}]}"#).unwrap();
+    let b: serde_json::Value =
+        serde_json::from_str(r#"{"a":[{"a":4,"b":3}],"b":{"a":2,"z":1}}"#).unwrap();
+    assert_eq!(digest(&a), digest(&b));
+}
 fn proposal(snapshot: &zixcel_repository_observer::model::Snapshot) -> Proposal {
     Proposal {
         schema: "zix-repository-proposal/v1".into(),
