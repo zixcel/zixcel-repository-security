@@ -9,8 +9,8 @@ recipe=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 work=$(mktemp -d "$RUNNER_TEMP/zixcel-engine.XXXXXX")
 trap 'chmod -R u+w -- "$work"; rm -rf -- "$work"' EXIT
 curl --disable --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --max-time 120 \
-    https://go.dev/dl/go1.27.2.linux-amd64.tar.gz -o "$work/go.tgz"
-printf '%s  %s\n' ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045fe5 "$work/go.tgz" | sha256sum -c --strict
+    https://go.dev/dl/go1.27.3.linux-amd64.tar.gz -o "$work/go.tgz"
+printf '%s  %s\n' 65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40 "$work/go.tgz" | sha256sum -c --strict
 tar -xzf "$work/go.tgz" -C "$work"
 source="$work/source"
 git init -q "$source"
