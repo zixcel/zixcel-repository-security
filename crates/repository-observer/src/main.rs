@@ -1,9 +1,11 @@
 #![forbid(unsafe_code)]
 use clap::{Parser, Subcommand};
+use std::io::Write;
 use std::{path::PathBuf, process::ExitCode};
 use zeroize::Zeroizing;
 use zixcel_repository_observer::{Github, Proposal, Result, model::Snapshot, observe, review};
 mod input;
+mod output;
 #[derive(Parser)]
 #[command(
     version,
@@ -53,16 +55,10 @@ fn run(cli: Cli) -> Result<serde_json::Value> {
     }
 }
 fn main() -> ExitCode {
-    match run(Cli::parse()) {
-        Ok(value) => {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&value).expect("JSON model")
-            );
-            ExitCode::SUCCESS
-        }
+    match run(Cli::parse()).and_then(output::emit) {
+        Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            eprintln!("{{\"error\":\"{error}\"}}");
+            let _ = writeln!(std::io::stderr().lock(), "{{\"error\":\"{error}\"}}");
             ExitCode::from(2)
         }
     }
