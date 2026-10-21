@@ -68,7 +68,12 @@ pub fn run(e: &Value, passes: Vec<Pass>) -> Result<Vec<Hit>> {
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::null());
-        let status = crate::engine_process::run(&mut command, &report)?;
+        let status = crate::process_guard::run(
+            &mut command,
+            &report,
+            std::time::Duration::from_secs(120),
+            MAX_FILE as u64,
+        )?;
         require(matches!(status.code(), Some(0 | 1)))?;
         let data: Value = serde_json::from_slice(&io::read(&report, MAX_FILE)?)?;
         let list = data.as_array().ok_or("expected report array")?;

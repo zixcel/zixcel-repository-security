@@ -76,6 +76,14 @@ and kills/reaps its owned child on errors or unwinding. Reports are no-follow re
 with size/metadata checks. Unexpected exits, malformed reports, timeouts and limits
 fail the operation; they cannot produce a passed receipt.
 
+Local Git observations reuse the owned-child guard with a separate output budget.
+They collect output through a bounded private file, check path count/length during
+collection, and preserve deleted tracked entries for policy checks. Each command
+uses a sanitized environment, explicit requested worktree and command-local
+`core.fsmonitor=false`/disabled hooks. Global/system Git configuration and ambient
+Git environment overrides do not select helpers or redirect the observed worktree.
+No repository configuration is rewritten by these read-only observations.
+
 `GOMAXPROCS=1` and `GOMEMLIMIT=384MiB` constrain normal behavior. The 512MiB sampled
 RSS threshold and 25ms polling are observations, not hard memory/disk isolation.
 They cannot prevent allocation spikes or contain a compromised executable spawning
