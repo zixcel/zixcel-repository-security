@@ -1,0 +1,31 @@
+[package]
+name = "zixcel-repository-observer"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+description = "Bounded read-only GitHub configuration observations and drift review"
+license = "Apache-2.0"
+repository = "https://github.com/zixcel/zixcel-repository-security"
+publish = false
+
+[[bin]]
+name = "zix-repository-observer"
+path = "src/main.rs"
+
+[dependencies]
+crowsi-provider-read-http = { git = "https://github.com/crowsi-net/crowsi-transport-foundation", rev = "8daf36688e1618f294274c61ebfe607f77639534" }
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+clap = { version = "4.6.1", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+sha2 = "0.11.1"
+rustix = { version = "1.1.4", features = ["fs"] }
+zeroize = "1.8.2"
+
+[dev-dependencies]
+tempfile = "3.27.0"
+
+[lints.rust]
+unsafe_code = "forbid"
+[lints.clippy]
+all = "warn"

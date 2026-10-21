@@ -1,0 +1,10 @@
+[package]
+name = "repository-observer-release"
+version = "0.1.0"
+edition = "2024"
+publish = false
+[workspace]
+[dependencies]
+zix-cli = { git = "https://github.com/zixcel/cli", rev = "7fe5789b4beb0948bc58c559de8a560eb8a65794" }
+serde_json = "1.0"
+toml = "1.1.8"

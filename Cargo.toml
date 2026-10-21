@@ -8,6 +8,11 @@ repository = "https://github.com/zixcel/zixcel-repository-security"
 publish = false
 include = ["/src/*.rs", "/scripts/**", "/assets/**", "/examples/**", "/rust-toolchain.toml", "/tests/*.rs", "/tests/gitleaks-pin.json", "/Cargo.toml", "/Cargo.lock", "/README.md", "/docs/**", "/LICENSE*", "/NOTICE", "/THIRD_PARTY_NOTICES.md"]
 
+[workspace]
+members = ["crates/repository-observer"]
+default-members = ["."]
+resolver = "3"
+
 [dependencies]
 base64 = "0.23.1"
 caseless = "0.2.2"

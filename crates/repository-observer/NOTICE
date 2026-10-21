@@ -1,0 +1,9 @@
+zixcel-repository-observer
+Copyright 2026 HAT Inc.
+
+This independently packaged configuration observer is offered under Apache-2.0.
+It does not bundle or execute the Gitleaks detector. The repository's existing
+scanner and detector distributions retain their own notices and permissions.
+
+DEPENDENCIES.json identifies the resolved build/development graph, not a
+linked-binary SBOM. THIRD-PARTY retains the dependency license materials.
