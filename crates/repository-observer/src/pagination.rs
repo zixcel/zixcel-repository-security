@@ -38,10 +38,10 @@ pub(crate) fn list(
             }
         }
         if items.len() < 100 {
-            if let Some(total) = response.get("total_count") {
-                if total.as_u64() != Some(data.len() as u64) {
-                    return partial(data, "count_changed_or_incomplete");
-                }
+            if let Some(total) = response.get("total_count")
+                && total.as_u64() != Some(data.len() as u64)
+            {
+                return partial(data, "count_changed_or_incomplete");
             }
             data.sort_by_key(|v| v[key].to_string());
             return Observation::supported(Value::Array(data));

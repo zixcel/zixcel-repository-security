@@ -13,7 +13,7 @@ name = "zix-repository-observer"
 path = "src/main.rs"
 
 [dependencies]
-crowsi-provider-read-http = { git = "https://github.com/crowsi-net/crowsi-transport-foundation", rev = "6f31d32bc52635af4260a818e7b8d41b04ab3f9f" }
+crowsi-provider-read-http = { git = "https://github.com/crowsi-net/crowsi-transport-foundation", rev = "8daf36688e1618f294274c61ebfe607f77639534" }
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
 clap = { version = "4.6.1", features = ["derive"] }
 serde = { version = "1.0.228", features = ["derive"] }

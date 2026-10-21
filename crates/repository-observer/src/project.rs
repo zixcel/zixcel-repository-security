@@ -72,7 +72,7 @@ pub(crate) fn environment(value: &Value) -> Result<Value> {
                     .iter()
                     .map(|r| {
                         Ok(json!({"type":r["type"].as_str().ok_or("reviewer_schema")?,
-                        "id":r["reviewer"]["id"].as_u64().ok_or("reviewer_schema")?}))
+                        "reviewer":{"id":r["reviewer"]["id"].as_u64().ok_or("reviewer_schema")?}}))
                     })
                     .collect::<Result<Vec<Value>>>()?;
                 json!({"type":kind,"prevent_self_review":rule["prevent_self_review"],"reviewers":people})

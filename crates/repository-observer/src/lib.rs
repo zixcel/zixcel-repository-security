@@ -1,5 +1,6 @@
 //! Repository-local, read-only observation. No setting mutation or approval grant.
 #![forbid(unsafe_code)]
+mod change;
 mod collect;
 mod endpoints;
 pub mod model;

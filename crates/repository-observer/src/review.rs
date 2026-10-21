@@ -66,14 +66,12 @@ pub fn review(baseline: &Snapshot, fresh: &Snapshot, proposal: &Proposal) -> Res
         {
             return Err("unobserved_or_changed_component");
         }
-        // Only the fully typed defaults projection can form a proposed change today.
-        // Rulesets/Environments remain evidence for their separately reviewed owner operation.
-        if change.component != "actions_defaults" {
-            return Err("unsupported_change_component");
-        }
-        if crate::project::defaults(&change.desired)? != change.desired {
-            return Err("unexpected_change_fields");
-        }
+        crate::change::validate(
+            &change.component,
+            &component.data,
+            &change.desired,
+            &fresh.identity.repository,
+        )?;
         if change.desired == component.data {
             return Err("no_change");
         }

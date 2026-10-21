@@ -11,6 +11,15 @@ pub(crate) fn one(
     }
 }
 pub(crate) fn ruleset(value: &Value) -> Result<Value> {
+    if value["id"].as_u64().is_none_or(|id| id == 0)
+        || !matches!(value["target"].as_str(), Some("branch" | "tag" | "push"))
+        || !matches!(
+            value["enforcement"].as_str(),
+            Some("active" | "disabled" | "evaluate")
+        )
+    {
+        return Err("ruleset_schema");
+    }
     project::fields(
         value,
         &[
@@ -24,6 +33,13 @@ pub(crate) fn ruleset(value: &Value) -> Result<Value> {
     )
 }
 pub(crate) fn rule_detail(value: &Value) -> Result<Value> {
+    ruleset(value)?;
+    if !value["rules"].is_array()
+        || !value["bypass_actors"].is_array()
+        || !(value["conditions"].is_object() || value["conditions"].is_null())
+    {
+        return Err("ruleset_detail_schema");
+    }
     project::fields(
         value,
         &[

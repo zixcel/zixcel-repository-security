@@ -252,7 +252,7 @@ dependencies = [
 [[package]]
 name = "crowsi-provider-read-http"
 version = "0.1.0"
-source = "git+https://github.com/crowsi-net/crowsi-transport-foundation?rev=6f31d32bc52635af4260a818e7b8d41b04ab3f9f#6f31d32bc52635af4260a818e7b8d41b04ab3f9f"
+source = "git+https://github.com/crowsi-net/crowsi-transport-foundation?rev=8daf36688e1618f294274c61ebfe607f77639534#8daf36688e1618f294274c61ebfe607f77639534"
 dependencies = [
  "crowsi-transport-foundation",
  "reqwest",
@@ -262,7 +262,7 @@ dependencies = [
 [[package]]
 name = "crowsi-transport-foundation"
 version = "0.10.0"
-source = "git+https://github.com/crowsi-net/crowsi-transport-foundation?rev=6f31d32bc52635af4260a818e7b8d41b04ab3f9f#6f31d32bc52635af4260a818e7b8d41b04ab3f9f"
+source = "git+https://github.com/crowsi-net/crowsi-transport-foundation?rev=8daf36688e1618f294274c61ebfe607f77639534#8daf36688e1618f294274c61ebfe607f77639534"
 dependencies = [
  "bytes",
  "http",

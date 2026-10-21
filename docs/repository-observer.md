@@ -52,7 +52,7 @@ GitHub does not provide an atomic cross-endpoint snapshot here. Fresh collection
 detects drift in the projected components; it cannot prevent later changes.
 API list pagination is not a server-side transactional snapshot.
 
-## Review an exact proposed defaults change
+## Review exact projected configuration changes
 
 A proposal names the repository ID, configuration hash, component's data hash
 and desired observation. `configuration_sha256` excludes retrieval time and
@@ -87,9 +87,13 @@ tampering, identity/configuration drift, timestamps older than 24 hours or over
 60 seconds in the future, duplicates, unknown fields, unsupported targets and
 no-op changes. Desired data uses compact sorted JSON keys for component hashes.
 
-Only the two typed Actions defaults fields are currently proposal targets.
-Ruleset, Environment and credential operations require a separate owner-specific
-operation and human authorization; their observation is not an executable plan.
+Proposal targets are the two typed Actions defaults fields, existing repository-owned
+ruleset projections, and reviewer/timer declarations for existing Environments.
+Ruleset ID/source/target and Environment IDs/names/deployment branch policy cannot
+change through this review. Inherited rules need their source owner. Credential
+changes, creation/deletion, effective workflow permissions, and deployment patterns
+are unsupported targets and are refused. All application of changes still requires
+a separate owner operation and human authorization; observations are not executable plans.
 Successful review always emits `approval_required: true`, `executable: false`.
 It never applies a change, even after a previously approved proposal.
 
