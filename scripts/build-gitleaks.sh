@@ -68,9 +68,17 @@ cp "$source/go.mod" "$source/go.sum" "$output/"
 # module-only notices can describe unused packages and remain in the audit evidence.
 GOBIN="$work/bin" "$work/go/bin/go" install golang.org/x/vuln/cmd/govulncheck@v1.8.0
 "$work/bin/govulncheck" -mode=extract "$output/gitleaks" > "$output/binary-inventory.jsonl"
-jq -s -e '.[1].pkgSymbols|length > 0' "$output/binary-inventory.jsonl" > /dev/null
+if ! jq -s -e '.[1].pkgSymbols|length > 0' "$output/binary-inventory.jsonl" > /dev/null; then
+    echo '::error::Binary extraction did not provide package symbols; refusing module-only audit.' >&2
+    jq -s '{header: .[0], bodyKeys: (.[1] | keys), symbolCount: (.[1].pkgSymbols | length)}' "$output/binary-inventory.jsonl" >&2
+    exit 1
+fi
 "$work/bin/govulncheck" -mode=binary -json "$output/gitleaks" > "$output/vulnerabilities.jsonl"
-jq -s -e '[.[]|select(.finding.trace[0].package)]|length == 0' "$output/vulnerabilities.jsonl" > /dev/null
+if ! jq -s -e '[.[]|select(.finding.trace[0].package)]|length == 0' "$output/vulnerabilities.jsonl" > /dev/null; then
+    echo '::error::Compiled vulnerable packages remain in the candidate binary.' >&2
+    jq -c 'select(.finding.trace[0].package) | .finding | {osv, trace}' "$output/vulnerabilities.jsonl" >&2
+    exit 1
+fi
 # Accept module-only notices only when every affected package is proven absent.
 # Missing/unknown package definitions fail closed; no advisory-specific allowlist.
 jq -s -e --slurpfile imports "$output/imports.json" '
